@@ -1,10 +1,13 @@
 [package]
 name = "img_diff"
-version = "1.0.0"
+version = "1.0.1"
 authors = ["Miguel Mendes <miguelmendeseiriz@gmail.com>"]
 description = "Command line tool to diff images in 2 structurally similar folders and output diff images."
 license = "MIT"
 repository = "https://github.com/Mike-Neto/img_diff"
+categories = ["multimedia::images", "command-line-utilities"]
+keywords = ["image", "comparison"]
+readme = "README.md"
 
 [dependencies]
 dssim = "2.9.7"
