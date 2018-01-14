@@ -2,6 +2,8 @@
 name = "img_diff"
 version = "1.0.0"
 authors = ["Miguel Mendes <miguelmendeseiriz@gmail.com>"]
+description = "Command line tool to diff images in 2 structurally similar folders and output diff images."
+license = "MIT"
 
 [dependencies]
 dssim = "2.9.7"
