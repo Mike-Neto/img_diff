@@ -38,6 +38,36 @@ mod end_to_end {
     use std::fs;
 
     #[test]
+    fn it_works_for_bmp_files() {
+        let _result = fs::remove_file(
+            "tests/it_works_for_bmp_files/it_works_for_bmp_files_diff/rustacean-error.bmp",
+        );
+
+        assert_cli::Assert::main_binary()
+            .with_args(
+                &[
+                    "-s",
+                    "tests/it_works_for_bmp_files/it_works_for_bmp_files_src",
+                    "-d",
+                    "tests/it_works_for_bmp_files/it_works_for_bmp_files_dest",
+                    "-f",
+                    "tests/it_works_for_bmp_files/it_works_for_bmp_files_diff",
+                ],
+            )
+            .stdout()
+            .is("0\n0.68007237")
+            .succeeds()
+            .unwrap();
+
+        assert!(
+            File::open(
+                "tests/it_works_for_bmp_files/it_works_for_bmp_files_diff/rustacean-error.bmp",
+            ).is_ok()
+        );
+    }
+
+
+    #[test]
     fn it_prints_usage_text_when_no_args_are_provided() {
         assert_cli::Assert::main_binary()
             .stdout()

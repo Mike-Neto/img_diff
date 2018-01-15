@@ -9,6 +9,7 @@ extern crate rayon;
 extern crate rgb;
 extern crate lodepng;
 extern crate imgref;
+extern crate bmp;
 
 use std::path::{Path, PathBuf};
 use getopts::Options;
@@ -98,38 +99,29 @@ pub fn visit_dirs(dir: &PathBuf, config: &Config) -> io::Result<()> {
                     );
 
                 if Path::new(&dest_file_name).exists() {
-                    let mut attr = dssim::Dssim::new();
-                    let g1 = attr.create_image(&load(entry.path()).unwrap()).unwrap();
-                    let g2 = attr.create_image(&load(&dest_file_name).unwrap()).unwrap();
-                    attr.set_save_ssim_maps(1);
-                    let (diff, ssim_maps) = attr.compare(&g1, g2);
-                    if config.verbose {
-                        println!(
-                            "compared file: {:?} had diff value of: {:?}",
-                            entry.path(),
-                            diff
-                        );
-                    } else {
-                        println!("{:?}", diff);
-                    }
-                    if diff != 0.0 {
-                        let diff_file_name =
-                            dest_file_name.replace(
-                                config.dest_dir.clone().unwrap().to_str().unwrap(),
-                                config.diff_dir.clone().unwrap().to_str().unwrap(),
-                            );
-                        {
-
-                            let diff_path = Path::new(&diff_file_name);
-                            let diff_path_dir = diff_path.parent().unwrap();
-                            if !diff_path_dir.exists() {
-                                if config.verbose {
-                                    println!("creating directory: {:?}", diff_path_dir);
-                                }
-                                create_path(diff_path);
+                    if entry.path().extension().unwrap() == "bmp" {
+                        let (diff_value, diff_image) = compare_bmp(&entry, &dest_file_name);
+                        print_diff_result(config.verbose, &entry, diff_value);
+                        if diff_value != 0.0 {
+                            let diff_file_name =
+                                get_diff_file_name_and_validate_path(dest_file_name, config);
+                            output_bmp(diff_file_name, diff_image);
+                            if config.verbose {
+                                eprintln!("diff found in file: {:?}", entry.path());
                             }
                         }
-                        output_diff_files(diff_file_name, ssim_maps);
+                    } else {
+                        let mut attr = dssim::Dssim::new();
+                        let g1 = attr.create_image(&load(entry.path()).unwrap()).unwrap();
+                        let g2 = attr.create_image(&load(&dest_file_name).unwrap()).unwrap();
+                        attr.set_save_ssim_maps(1);
+                        let (ssim_diff_value, ssim_maps) = attr.compare(&g1, g2);
+                        print_diff_result(config.verbose, &entry, ssim_diff_value);
+                        if ssim_diff_value != 0.0 {
+                            let diff_file_name =
+                                get_diff_file_name_and_validate_path(dest_file_name, config);
+                            output_diff_files(diff_file_name, ssim_maps);
+                        }
                         if config.verbose {
                             eprintln!("diff found in file: {:?}", entry.path());
                         }
@@ -139,6 +131,104 @@ pub fn visit_dirs(dir: &PathBuf, config: &Config) -> io::Result<()> {
         }
     }
     Ok(())
+}
+
+///
+fn get_diff_file_name_and_validate_path(dest_file_name: String, config: &Config) -> String {
+    let diff_file_name = dest_file_name.replace(
+        config.dest_dir.clone().unwrap().to_str().unwrap(),
+        config.diff_dir.clone().unwrap().to_str().unwrap(),
+    );
+    {
+
+        let diff_path = Path::new(&diff_file_name);
+        let diff_path_dir = diff_path.parent().unwrap();
+        if !diff_path_dir.exists() {
+            if config.verbose {
+                println!("creating directory: {:?}", diff_path_dir);
+            }
+            create_path(diff_path);
+        }
+    }
+    diff_file_name
+}
+
+/// saves bmp file diff to disk
+fn output_bmp(path_name: String, image: Option<bmp::Image>) {
+    match image {
+        Some(image) => {
+            let _ = image.save(&path_name).unwrap_or_else(|e| {
+                eprintln!("Failed to save diff_file: {}\nError: {}", path_name, e)
+            });
+        }
+        None => (),
+    }
+}
+
+/// print diff result
+fn print_diff_result<T: std::fmt::Debug>(verbose: bool, entry: &fs::DirEntry, diff_value: T) {
+    if verbose {
+        println!(
+            "compared file: {:?} had diff value of: {:?}",
+            entry.path(),
+            diff_value
+        );
+    } else {
+        println!("{:?}", diff_value);
+    }
+}
+
+/// load and compare bmp files
+fn compare_bmp(entry: &fs::DirEntry, dest_file_name: &String) -> (f32, Option<bmp::Image>) {
+    let src_img = bmp::open(entry.path());
+    let dest_img = bmp::open(dest_file_name);
+    let mut diff_value = 0.0;
+
+    if src_img.is_ok() && dest_img.is_ok() {
+        let src_img = src_img.unwrap();
+        let dest_img = dest_img.unwrap();
+
+        let mut diff_image = bmp::Image::new(src_img.get_width(), src_img.get_height());
+        //TODO(MiguelMendes): Thread this
+        for (x, y) in src_img.coordinates() {
+            let dest_pixel = dest_img.get_pixel(x, y);
+            let src_pixel = src_img.get_pixel(x, y);
+            let diff_pixel = subtract(&src_pixel, &dest_pixel);
+            diff_value += interpolate(&diff_pixel);
+            diff_image.set_pixel(x, y, diff_pixel);
+        }
+        return (diff_value, Some(diff_image));
+    }
+
+    (diff_value, None)
+}
+
+fn interpolate(p: &bmp::Pixel) -> f32 {
+    ((p.r / 3) + (p.g / 3) + (p.b / 3)) as f32 / 10000000.0
+}
+
+fn subtract(p1: &bmp::Pixel, p2: &bmp::Pixel) -> bmp::Pixel {
+    let r;
+    let g;
+    let b;
+
+    if p1.r >= p2.r {
+        r = p1.r - p2.r;
+    } else {
+        r = p2.r - p1.r
+    }
+    if p1.g >= p2.g {
+        g = p1.g - p2.g;
+    } else {
+        g = p2.g - p1.g
+    }
+    if p1.b >= p2.b {
+        b = p1.b - p2.b;
+    } else {
+        b = p2.b - p1.b
+    }
+
+    bmp::Pixel { r, g, b }
 }
 
 /// Helper to create folder hierarchies
