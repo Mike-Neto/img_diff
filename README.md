@@ -23,6 +23,20 @@ The value returned for bmp images 0 if images are equal and a positive number th
 
 Will go trough all the files in the -s dir and subdir's and compare them to the ones in the -d outputing diff files if a difrence is found to -f dir.
 
+## Compile from source
+     git clone https://github.com/Mike-Neto/img_diff.git
+     cd img_diff
+     cargo build --release
+
+## Test
+	cargo test
+
+## Docs
+     cargo doc --open
+
+## Crate
+[Crates.io](https://crates.io/crates/img_diff)
+
 ## Build or Download
 
 You need [Rust](https://www.rust-lang.org/en-US/install.html)
