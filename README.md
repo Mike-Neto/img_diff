@@ -13,7 +13,7 @@ The value returned for bmp images 0 if images are equal and a positive number th
 
 ## Future Features
 
-* Support multiple format's of images (JPEG, TIFF).
+* Support multiple format's of images (JPEG).
 * Allow for a threshold to output diff file.
 * Provide a single unit of diffrence.
 
