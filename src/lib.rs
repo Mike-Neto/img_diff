@@ -99,7 +99,14 @@ pub fn visit_dirs(dir: &PathBuf, config: &Config) -> io::Result<()> {
                     );
 
                 if Path::new(&dest_file_name).exists() {
-                    if entry.path().extension().unwrap() == "bmp" {
+                    let file_extension = entry
+                        .path()
+                        .extension()
+                        .unwrap()
+                        .to_str()
+                        .unwrap()
+                        .to_lowercase();
+                    if file_extension == "bmp" {
                         let (diff_value, diff_image) = compare_bmp(&entry, &dest_file_name);
                         print_diff_result(config.verbose, &entry, diff_value);
                         if diff_value != 0.0 {
@@ -133,7 +140,23 @@ pub fn visit_dirs(dir: &PathBuf, config: &Config) -> io::Result<()> {
     Ok(())
 }
 
-///
+
+/// Parallel and diffrent algorithm implementation of visit_dirs
+pub fn do_diff(config: &Config) -> io::Result<()> {
+    // Get a full list of all images to load (scr and dest pairs)
+    let files_to_load = find_all_files_to_load(&config);
+    // open a channel for pairs of loaded images
+    // do the comparison in the recivieng channel
+    // send to another channel to write the diff file if necessary
+
+    Ok(())
+}
+
+fn find_all_files_to_load(config: &Config) {
+    unimplemented!();
+}
+
+/// helper to create necessary folders for IO operations to be successfull
 fn get_diff_file_name_and_validate_path(dest_file_name: String, config: &Config) -> String {
     let diff_file_name = dest_file_name.replace(
         config.dest_dir.clone().unwrap().to_str().unwrap(),

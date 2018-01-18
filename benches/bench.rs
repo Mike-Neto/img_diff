@@ -1,26 +1,24 @@
 #[macro_use]
-extern crate bencher;
+extern crate criterion;
+extern crate img_diff;
 
-use bencher::Bencher;
-extern crate assert_cli;
+use criterion::Criterion;
+use img_diff::{Config, visit_dirs};
+use std::path::PathBuf;
 
-fn bmp(bench: &mut Bencher) {
-    bench.iter(|| {
-        assert_cli::Assert::main_binary()
-            .with_args(
-                &[
-                    "-s",
-                    "tests/bench_bmp/bench_bmp_src",
-                    "-d",
-                    "tests/bench_bmp/bench_bmp_dest",
-                    "-f",
-                    "tests/bench_bmp/bench_bmp_diff",
-                ],
-            )
-            .succeeds();
+
+fn bmp(c: &mut Criterion) {
+    let config: Config = Config {
+        src_dir: Some(PathBuf::from("tests/bench_bmp/bench_bmp_src")),
+        dest_dir: Some(PathBuf::from("tests/bench_bmp/bench_bmp_dest")),
+        diff_dir: Some(PathBuf::from("tests/bench_bmp/bench_bmp_diff")),
+        help: false,
+        verbose: false,
+    };
+    c.bench_function("sync_bmp", |b| {
+        b.iter(|| visit_dirs(&config.src_dir.clone().unwrap(), &config));
     });
-    bench.bytes = 0 as u64;
 }
 
-benchmark_group!(benches, bmp);
-benchmark_main!(benches);
+criterion_group!(benches, bmp);
+criterion_main!(benches);
