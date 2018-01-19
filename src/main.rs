@@ -21,6 +21,7 @@ fn main() {
             Err(err) => eprintln!("Error occured: {:?}", err),
         };
     /*
+
         match do_diff(&config) {
             Ok(_) => {
                 if config.verbose {
@@ -29,7 +30,7 @@ fn main() {
             }
             Err(err) => eprintln!("Error occured: {:?}", err),
         }
-        */
+                */
     } else if config.help {
         println!(
             "-s to indicate source directory\n-d to indicate destination directory\n-f to indicate diff directory\n-v to toggle verbose mode"
