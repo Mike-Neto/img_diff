@@ -1,6 +1,6 @@
 # img_diff
 
-[![Crates.io](https://img.shields.io/crates/d/rustc-serialize.svg)]()
+[![Crates.io](https://img.shields.io/crates/d/img_diff.svg)]()
 [![Current Version](https://img.shields.io/crates/v/img_diff.svg)](https://crates.io/crates/img_diff)
 [![License: MIT](https://img.shields.io/crates/l/img_diff.svg)](#license)
 
