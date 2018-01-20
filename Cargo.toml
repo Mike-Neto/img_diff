@@ -20,6 +20,11 @@ bmp = "0.3.0"
 
 [dev-dependencies]
 assert_cli = "0.5.4"
+criterion = "0.1.2"
+
+[[bench]]
+name = "bench"
+harness = false
 
 [profile.dev]
 opt-level = 3

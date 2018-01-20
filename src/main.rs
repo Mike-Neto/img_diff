@@ -1,7 +1,7 @@
 extern crate img_diff;
 
 use std::env;
-use img_diff::{Config, visit_dirs};
+use img_diff::{Config, do_diff};
 
 fn main() {
     let args: Vec<String> = env::args().collect();
@@ -12,14 +12,14 @@ fn main() {
     }
 
     if config.src_dir.is_some() && config.dest_dir.is_some() && config.diff_dir.is_some() {
-        match visit_dirs(&config.src_dir.clone().unwrap(), &config) {
+        match do_diff(&config) {
             Ok(_) => {
                 if config.verbose {
                     println!("Compared everything, process ended with great success!")
                 }
             }
             Err(err) => eprintln!("Error occured: {:?}", err),
-        };
+        }
     } else if config.help {
         println!(
             "-s to indicate source directory\n-d to indicate destination directory\n-f to indicate diff directory\n-v to toggle verbose mode"
@@ -55,7 +55,7 @@ mod end_to_end {
                 ],
             )
             .stdout()
-            .is("0\n0.68007237")
+            .is("3.7269595\n0\n0.68007237")
             .succeeds()
             .unwrap();
 
@@ -79,7 +79,7 @@ mod end_to_end {
     #[test]
     fn it_prints_help_text_when_help_arg_is_provided() {
         assert_cli::Assert::main_binary()
-        	.with_args(&["-h"])
+            .with_args(&["-h"])
             .stdout()
             .contains("-s to indicate source directory\n-d to indicate destination directory\n-f to indicate diff directory\n-v to toggle verbose mode")
             .succeeds()
@@ -222,8 +222,8 @@ mod end_to_end {
     #[test]
     fn it_works_for_more_files_in_scr_than_dest() {
         if Path::new("tests/it_works_for_more_files_in_scr_than_dest/it_works_for_more_files_in_scr_than_dest_diff").exists() {
-        	let _result = fs::remove_dir_all("tests/it_works_for_more_files_in_scr_than_dest/it_works_for_more_files_in_scr_than_dest_diff");
-    	}
+            let _result = fs::remove_dir_all("tests/it_works_for_more_files_in_scr_than_dest/it_works_for_more_files_in_scr_than_dest_diff");
+        }
 
         assert_cli::Assert::main_binary()
             .with_args(
@@ -245,8 +245,8 @@ mod end_to_end {
     #[test]
     fn it_works_when_diff_folder_is_not_created() {
         if Path::new("tests/it_works_when_diff_folder_is_not_created/it_works_when_diff_folder_is_not_created_diff").exists() {
-        	let _result = fs::remove_dir_all("tests/it_works_when_diff_folder_is_not_created/it_works_when_diff_folder_is_not_created_diff");
-    	}
+            let _result = fs::remove_dir_all("tests/it_works_when_diff_folder_is_not_created/it_works_when_diff_folder_is_not_created_diff");
+        }
 
         assert_cli::Assert::main_binary()
             .with_args(

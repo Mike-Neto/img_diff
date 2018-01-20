@@ -18,6 +18,8 @@ use std::io;
 use dssim::*;
 use rayon::prelude::*;
 use imgref::*;
+use std::sync::mpsc;
+use std::thread;
 
 /// Config includes all the variables in this application
 #[derive(Debug)]
@@ -99,9 +101,16 @@ pub fn visit_dirs(dir: &PathBuf, config: &Config) -> io::Result<()> {
                     );
 
                 if Path::new(&dest_file_name).exists() {
-                    if entry.path().extension().unwrap() == "bmp" {
+                    let file_extension = entry
+                        .path()
+                        .extension()
+                        .unwrap()
+                        .to_str()
+                        .unwrap()
+                        .to_lowercase();
+                    if file_extension == "bmp" {
                         let (diff_value, diff_image) = compare_bmp(&entry, &dest_file_name);
-                        print_diff_result(config.verbose, &entry, diff_value);
+                        print_diff_result(config.verbose, &entry.path(), diff_value);
                         if diff_value != 0.0 {
                             let diff_file_name =
                                 get_diff_file_name_and_validate_path(dest_file_name, config);
@@ -116,7 +125,7 @@ pub fn visit_dirs(dir: &PathBuf, config: &Config) -> io::Result<()> {
                         let g2 = attr.create_image(&load(&dest_file_name).unwrap()).unwrap();
                         attr.set_save_ssim_maps(1);
                         let (ssim_diff_value, ssim_maps) = attr.compare(&g1, g2);
-                        print_diff_result(config.verbose, &entry, ssim_diff_value);
+                        print_diff_result(config.verbose, &entry.path(), ssim_diff_value);
                         if ssim_diff_value != 0.0 {
                             let diff_file_name =
                                 get_diff_file_name_and_validate_path(dest_file_name, config);
@@ -133,7 +142,151 @@ pub fn visit_dirs(dir: &PathBuf, config: &Config) -> io::Result<()> {
     Ok(())
 }
 
-///
+enum ImageType {
+    BMP(Result<bmp::Image, bmp::BmpError>),
+    PNG(Result<dssim::DssimImage<f32>, std::io::Error>),
+}
+
+struct Image {
+    path: PathBuf,
+    image: ImageType,
+}
+
+/// Parallel and diffrent algorithm implementation of visit_dirs
+pub fn do_diff(config: &Config) -> io::Result<()> {
+    // Get a full list of all images to load (scr and dest pairs)
+    let files_to_load = find_all_files_to_load(config.src_dir.clone().unwrap(), &config)?;
+
+    // open a channel to load pairs of images from disk
+    let (transmitter, receiver) = mpsc::channel();
+    thread::spawn(move || for (scr_path, dest_path) in files_to_load {
+        let extension = scr_path
+            .extension()
+            .unwrap()
+            .to_str()
+            .unwrap()
+            .to_lowercase();
+        if extension == "bmp" {
+            let src_img = Image {
+                path: scr_path.clone(),
+                image: ImageType::BMP(bmp::open(scr_path)),
+            };
+            let dest_img = Image {
+                path: dest_path.clone(),
+                image: ImageType::BMP(bmp::open(dest_path)),
+            };
+            transmitter.send((src_img, dest_img)).unwrap();
+        } else {
+            let mut attr = dssim::Dssim::new();
+            let src_img = Image {
+                path: scr_path.clone(),
+                image: ImageType::PNG(Ok(attr.create_image(&load(scr_path).unwrap()).unwrap())),
+            };
+            let dest_img = Image {
+                path: dest_path.clone(),
+                image: ImageType::PNG(Ok(attr.create_image(&load(dest_path).unwrap()).unwrap())),
+            };
+            transmitter.send((src_img, dest_img)).unwrap();
+        }
+    });
+
+    // do the comparison in the recivieng channel
+    for (src_img, dest_img) in receiver {
+        match src_img.image {
+            ImageType::BMP(src_image) => {
+                let dest_image = match dest_img.image {
+                    ImageType::BMP(dest_image) => dest_image,
+                    ImageType::PNG(_) => panic!("Mismatched image types, expected BMP got PNG"),
+                };
+                if src_image.is_ok() && dest_image.is_ok() {
+                    let src_bmp_img = src_image.unwrap();
+                    let dest_bmp_img = dest_image.unwrap();
+                    let mut diff_value = 0.0; //TODO(MiguelMendes): Give a meaning to this value
+                    let mut diff_image =
+                        bmp::Image::new(src_bmp_img.get_width(), src_bmp_img.get_height());
+                    for (x, y) in src_bmp_img.coordinates() {
+                        let dest_pixel = dest_bmp_img.get_pixel(x, y);
+                        let src_pixel = src_bmp_img.get_pixel(x, y);
+                        let diff_pixel = subtract(&src_pixel, &dest_pixel);
+                        diff_value += interpolate(&diff_pixel);
+                        diff_image.set_pixel(x, y, diff_pixel);
+                    }
+                    print_diff_result(config.verbose, &src_img.path, diff_value);
+                    let diff_file_name = get_diff_file_name_and_validate_path(
+                        String::from(dest_img.path.to_str().unwrap()),
+                        config,
+                    );
+                    if diff_value != 0.0 {
+                        if config.verbose {
+                            eprintln!(
+                                "diff found in file: {:?}",
+                                String::from(src_img.path.to_str().unwrap())
+                            );
+                        }
+                        // Use another tread to write the files as necessary
+                        let handle =
+                            thread::spawn(move || output_bmp(diff_file_name, Some(diff_image)));
+                        handle.join().unwrap();
+                    }
+                }
+            }
+            ImageType::PNG(src_image) => {
+                let dest_image = match dest_img.image {
+                    ImageType::PNG(dest_image) => dest_image,
+                    ImageType::BMP(_) => panic!("Mismatched image types, expected PNG got BMP"),
+                };
+                if src_image.is_ok() && dest_image.is_ok() {
+                    let src_png_img = src_image.unwrap();
+                    let dest_png_img = dest_image.unwrap();
+                    let mut attr = dssim::Dssim::new();
+                    attr.set_save_ssim_maps(1);
+                    let (ssim_diff_value, ssim_maps) = attr.compare(&src_png_img, dest_png_img);
+                    print_diff_result(config.verbose, &src_img.path, ssim_diff_value);
+                    if ssim_diff_value != 0.0 {
+                        let diff_file_name = get_diff_file_name_and_validate_path(
+                            String::from(dest_img.path.to_str().unwrap()),
+                            config,
+                        );
+                        output_diff_files(diff_file_name, ssim_maps);
+                    }
+                    if config.verbose {
+                        eprintln!(
+                            "diff found in file: {:?}",
+                            String::from(src_img.path.to_str().unwrap())
+                        );
+                    }
+                }
+            }
+        };
+
+    }
+    Ok(())
+}
+
+fn find_all_files_to_load(dir: PathBuf, config: &Config) -> io::Result<Vec<(PathBuf, PathBuf)>> {
+    let mut files: Vec<(PathBuf, PathBuf)> = vec![];
+    for entry in fs::read_dir(dir)? {
+        let entry = entry.unwrap().path();
+        if entry.is_file() {
+            //TODO(MiguelMendes): Clone fest @clean-up
+            let dest_file_name =
+                entry.to_str().unwrap().replace(
+                    config.src_dir.clone().unwrap().to_str().unwrap(),
+                    config.dest_dir.clone().unwrap().to_str().unwrap(),
+                );
+            files.push((entry, PathBuf::from(dest_file_name)));
+        } else {
+            let child_files = find_all_files_to_load(entry, &config)?;
+            //TODO(MiguelMendes): 1 liner for this? // join vec?
+            for child in child_files {
+                files.push(child);
+            }
+        }
+    }
+    Ok(files)
+}
+
+/// helper to create necessary folders for IO operations to be successfull
 fn get_diff_file_name_and_validate_path(dest_file_name: String, config: &Config) -> String {
     let diff_file_name = dest_file_name.replace(
         config.dest_dir.clone().unwrap().to_str().unwrap(),
@@ -166,11 +319,11 @@ fn output_bmp(path_name: String, image: Option<bmp::Image>) {
 }
 
 /// print diff result
-fn print_diff_result<T: std::fmt::Debug>(verbose: bool, entry: &fs::DirEntry, diff_value: T) {
+fn print_diff_result<T: std::fmt::Debug>(verbose: bool, entry: &PathBuf, diff_value: T) {
     if verbose {
         println!(
             "compared file: {:?} had diff value of: {:?}",
-            entry.path(),
+            entry,
             diff_value
         );
     } else {
