@@ -3,11 +3,11 @@ extern crate criterion;
 extern crate img_diff;
 
 use criterion::Criterion;
-use img_diff::{Config, visit_dirs};
+use img_diff::{Config, visit_dirs, do_diff};
 use std::path::PathBuf;
 
 
-fn bmp(c: &mut Criterion) {
+fn sync_bmp(c: &mut Criterion) {
     let config: Config = Config {
         src_dir: Some(PathBuf::from("tests/bench_bmp/bench_bmp_src")),
         dest_dir: Some(PathBuf::from("tests/bench_bmp/bench_bmp_dest")),
@@ -20,5 +20,16 @@ fn bmp(c: &mut Criterion) {
     });
 }
 
-criterion_group!(benches, bmp);
+fn async_bmp(c: &mut Criterion) {
+    let config: Config = Config {
+        src_dir: Some(PathBuf::from("tests/bench_bmp/bench_bmp_src")),
+        dest_dir: Some(PathBuf::from("tests/bench_bmp/bench_bmp_dest")),
+        diff_dir: Some(PathBuf::from("tests/bench_bmp/bench_bmp_diff")),
+        help: false,
+        verbose: false,
+    };
+    c.bench_function("async_bmp", |b| { b.iter(|| do_diff(&config)); });
+}
+
+criterion_group!(benches, sync_bmp, async_bmp);
 criterion_main!(benches);

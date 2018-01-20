@@ -1,7 +1,7 @@
 extern crate img_diff;
 
 use std::env;
-use img_diff::{Config, visit_dirs, do_diff};
+use img_diff::{Config, do_diff};
 
 fn main() {
     let args: Vec<String> = env::args().collect();
@@ -12,16 +12,6 @@ fn main() {
     }
 
     if config.src_dir.is_some() && config.dest_dir.is_some() && config.diff_dir.is_some() {
-        match visit_dirs(&config.src_dir.clone().unwrap(), &config) {
-            Ok(_) => {
-                if config.verbose {
-                    println!("Compared everything, process ended with great success!")
-                }
-            }
-            Err(err) => eprintln!("Error occured: {:?}", err),
-        };
-    /*
-
         match do_diff(&config) {
             Ok(_) => {
                 if config.verbose {
@@ -30,7 +20,6 @@ fn main() {
             }
             Err(err) => eprintln!("Error occured: {:?}", err),
         }
-                */
     } else if config.help {
         println!(
             "-s to indicate source directory\n-d to indicate destination directory\n-f to indicate diff directory\n-v to toggle verbose mode"
