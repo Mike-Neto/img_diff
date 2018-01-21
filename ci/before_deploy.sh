@@ -30,6 +30,7 @@ main() {
     make install DESTDIR=../../kcov-build
     cd ../..
     rm -rf kcov-master
+    ls -aR target/$TARGET/release
     for file in target/$TARGET/release/img_diff*[^\.d]; do mkdir -p "target/cov/$(basename $file)"; ./kcov-build/usr/local/bin/kcov --exclude-pattern=/.cargo,/usr/lib --verify "target/cov/$(basename $file)" "$file"; done
     curl -s "https://codecov.io/bash"
     echo "Uploaded code coverage"
