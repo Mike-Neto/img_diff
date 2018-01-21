@@ -18,9 +18,7 @@ main() {
     test -f Cargo.lock || cargo generate-lockfile
 
     cross rustc --bin img_diff --target $TARGET --release -- -C lto
-# DEBUG
-    ls target/$TARGET/release/
-# DEBUG
+
     cp target/$TARGET/release/img_diff $stage/
 
     cd $stage
