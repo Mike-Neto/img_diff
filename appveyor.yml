@@ -15,16 +15,6 @@ environment:
     - TARGET: i686-pc-windows-msvc
     - TARGET: x86_64-pc-windows-msvc
 
-    # Testing other channels
-    - TARGET: x86_64-pc-windows-gnu
-      RUST_VERSION:
-        - beta
-        - nightly
-    - TARGET: x86_64-pc-windows-msvc
-      RUST_VERSION:
-        - beta
-        - nightly
-
 install:
   - ps: >-
       If ($Env:TARGET -eq 'x86_64-pc-windows-gnu') {
@@ -51,13 +41,13 @@ test_script:
 
 before_deploy:
   # TODO Update this to build the artifacts that matter to you
-  - cargo rustc --target %TARGET% --release --bin hello -- -C lto
+  - cargo rustc --target %TARGET% --release --bin img_diff -- -C lto
   - ps: ci\before_deploy.ps1
 
 deploy:
   artifact: /.*\.zip/
   auth_token:
-    secure: BtH4wbXwQHUgUt1Ywjnc4ACeTsoiWGKRx0On21RPBizyDorBs3kUhST9XWj8Lo+N
+    secure: uyvzfYOBXCyM2QRztyomvP2SQ0IPOsZ7h6pS0DHuuzslRHeq6IB0yqIyq5XNEX93
   description: ''
   on:
     RUST_VERSION: stable
