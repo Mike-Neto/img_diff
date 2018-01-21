@@ -2,9 +2,8 @@
 
 [![Linux/OSX Build Status](https://travis-ci.org/Mike-Neto/img_diff.svg?branch=master)](https://travis-ci.org/Mike-Neto/img_diff)
 [![Windows Build Status](https://ci.appveyor.com/api/projects/status/afjuww52fyb2bd3g?svg=true)](https://ci.appveyor.com/project/Mike-Neto/img-diff)
-[![codecov](https://codecov.io/gh/Mike-Neto/img_diff/branch/master/graph/badge.svg)](https://codecov.io/gh/Mike-Neto/img_diff)
+[![codecov](https://codecov.io/gh/Mike-Neto/img_diff/branch/master/graph/badge.svg)](https://codecov.io/gh/Mike-Neto/img_diff)	
 [![Current Version](https://img.shields.io/crates/v/img_diff.svg)](https://crates.io/crates/img_diff)
-[![Crates.io](https://img.shields.io/crates/d/img_diff.svg)]()
 [![License: MIT](https://img.shields.io/crates/l/img_diff.svg)](#license)
 
 Rust based Command line tool to diff images in 2 structurally similar folders and output diff images.
