@@ -1,9 +1,109 @@
+# Based on the "trust" template v0.1.2
+# https://github.com/japaric/trust/tree/v0.1.2
+
+dist: trusty
 language: rust
+services: docker
+sudo: required
+
+env:
+  global:
+    - CRATE_NAME=img_diff
+
 rust:
   - stable
   - beta
   - nightly
+
 matrix:
+  include:
+    # Linux
+    - env: TARGET=aarch64-unknown-linux-gnu
+    - env: TARGET=arm-unknown-linux-gnueabi
+    - env: TARGET=armv7-unknown-linux-gnueabihf
+    - env: TARGET=i686-unknown-linux-gnu
+    - env: TARGET=i686-unknown-linux-musl
+    - env: TARGET=mips-unknown-linux-gnu
+    - env: TARGET=mips64-unknown-linux-gnuabi64
+    - env: TARGET=mips64el-unknown-linux-gnuabi64
+    - env: TARGET=mipsel-unknown-linux-gnu
+    - env: TARGET=powerpc-unknown-linux-gnu
+    - env: TARGET=powerpc64-unknown-linux-gnu
+    - env: TARGET=powerpc64le-unknown-linux-gnu
+    - env: TARGET=s390x-unknown-linux-gnu DISABLE_TESTS=1
+    - env: TARGET=x86_64-unknown-linux-gnu
+    - env: TARGET=x86_64-unknown-linux-musl
+
+    # OSX
+    - env: TARGET=i686-apple-darwin
+      os: osx
+    - env: TARGET=x86_64-apple-darwin
+      os: osx
+
+    # *BSD
+    - env: TARGET=i686-unknown-freebsd DISABLE_TESTS=1
+    - env: TARGET=x86_64-unknown-freebsd DISABLE_TESTS=1
+    - env: TARGET=x86_64-unknown-netbsd DISABLE_TESTS=1
+
+    # Windows
+    - env: TARGET=x86_64-pc-windows-gnu
+
+    # Testing other channels
+    - env: TARGET=x86_64-pc-windows-gnu
+      rust:
+        - beta
+        - nightly
+    - env: TARGET=x86_64-unknown-linux-gnu
+      rust:
+        - beta
+        - nightly
+    - env: TARGET=x86_64-apple-darwin
+      os: osx
+      rust:
+        - beta
+        - nightly
   allow_failures:
     - rust: nightly
     - rust: beta
+
+before_install:
+  - set -e
+  - rustup self update
+
+install:
+  - sh ci/install.sh
+  - source ~/.cargo/env || true
+
+script:
+  - bash ci/script.sh
+
+after_script: set +e
+
+before_deploy:
+  - sh ci/before_deploy.sh
+
+deploy:
+  api_key:
+    secure: ZnxUG7MNDw09aJCgsE69HkHZ15m0C6bSb97s6u3b2Y6ZWqx9Oe4JR0UWXC3KcGXcRj+0tOMldvJUSvpkkgnBQpO0sUW7U6LdYk6/23F63sG86eA7PdgVH1sCxIRH6ozYl/bJbCEYBEjAIQ4aP98k0YeLhIhoW9o7e/P8fA9KCrnykHrVaBh/dong347I3p2GLFGoB+pLpINsKdksx3CuYMsWTaD4u74rncn5tad7XQLZ0HR1fwISvzUykCK9GA8AQuTvzOw52nybx+15nuY+BHmHfx7eysFjtwbkeEgvEuYVATSQ/YV8aod4vWN0lge1aAyzzRe949+O7d0ZNl7cwiTzGHIzhwrIQbciQ12YQ02uinwvf7IiEIASWWztFIz5reE/KJ2EgPvZZFrD1K3ev+ZdhxuqBlakBMJrUOiefWYZjRXXe7cz4U7+poFbuAf8fCp4vDyWTCFkgUh8qgw5HPVndtRnWDksA9XpV6AQLhZkV+d3FUF2ov5o1x7T3z5XdpGARveh5RJ3wcvdgXHNpag1MzCZVfJZG5dVfHcAP/HTiUprNKL3R5p62GOKRB7cuVCldCEti8X+zolk+MK6cC/z0gzN+D23ZRtGg6CNAfWFlvTwixsUZNHbdaw7K/uTbmqCL0vHixRgR/3XQbLxDgb/uhaVaugaFC9Qve5kqps=
+  file_glob: true
+  file: $CRATE_NAME-$TRAVIS_TAG-$TARGET.*
+  on:
+    condition: $TRAVIS_RUST_VERSION = stable
+    tags: true
+  provider: releases
+  skip_cleanup: true
+
+cache: cargo
+before_cache:
+  # Travis can't cache files that are not readable by "others"
+  - chmod -R a+r $HOME/.cargo
+
+branches:
+  only:
+    # release tags
+    - /^v\d+\.\d+\.\d+.*$/
+    - master
+
+notifications:
+  email:
+    on_success: never
