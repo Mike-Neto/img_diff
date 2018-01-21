@@ -89,6 +89,13 @@ before_cache:
   - chmod -R a+r $HOME/.cargo
 
 
+
+branches:
+  only:
+    # release tags
+    - /^v\d+\.\d+\.\d+.*$/
+    - master
+
 notifications:
   email:
     on_success: never
