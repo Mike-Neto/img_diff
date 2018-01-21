@@ -260,7 +260,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
 name = "img_diff"
-version = "1.1.0"
+version = "1.1.5"
 dependencies = [
  "assert_cli 0.5.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "bmp 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
