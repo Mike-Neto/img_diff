@@ -8,6 +8,9 @@ repository = "https://github.com/Mike-Neto/img_diff"
 categories = ["multimedia::images", "command-line-utilities"]
 keywords = ["image", "comparison"]
 readme = "README.md"
+exclude = [
+    "tests/*",
+]
 
 [dependencies]
 dssim = "2.9.7"
