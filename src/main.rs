@@ -55,7 +55,13 @@ mod end_to_end {
                 ],
             )
             .stdout()
-            .is("3.7269595\n0\n0.68007237")
+            .contains("3.7269595")
+            .and()
+            .stdout()
+            .contains("0")
+            .and()
+            .stdout()
+            .contains("0.68007237")
             .succeeds()
             .unwrap();
 
@@ -216,7 +222,10 @@ mod end_to_end {
                 ],
             )
             .stdout()
-            .contains("Dssim(0)\nDssim(4.4469")
+            .contains("Dssim(0)")
+            .and()
+            .stdout()
+            .contains("Dssim(4.4469")
             //.is("Dssim(0)\nDssim(4.44694203487064)\nDssim(0)") TODO(MiguelMendes): PR to allow this to be a RegEx
             .succeeds()
             .unwrap();
@@ -241,7 +250,10 @@ mod end_to_end {
             )
             .stdout()
             //.is("Dssim(0)\nDssim(4.44694203487064)")
-            .contains("Dssim(0)\nDssim(4.4469")
+            .contains("Dssim(0)")
+            .and()
+            .stdout()
+            .contains("Dssim(4.4469")
             .succeeds()
             .unwrap();
     }
@@ -265,7 +277,10 @@ mod end_to_end {
             )
             .stdout()
             //.is("Dssim(0)\nDssim(4.44694203487064)\nDssim(0)")
-            .contains("Dssim(0)\nDssim(4.4469")
+            .contains("Dssim(0)")
+            .and()
+            .stdout()
+            .contains("Dssim(4.4469")
             .succeeds()
             .unwrap();
     }
