@@ -1,7 +1,7 @@
 extern crate img_diff;
 
 use std::env;
-use img_diff::{Config, do_diff};
+use img_diff::{Config, visit_dirs, do_diff};
 
 fn main() {
     let args: Vec<String> = env::args().collect();
@@ -12,13 +12,24 @@ fn main() {
     }
 
     if config.src_dir.is_some() && config.dest_dir.is_some() && config.diff_dir.is_some() {
-        match do_diff(&config) {
-            Ok(_) => {
-                if config.verbose {
-                    println!("Compared everything, process ended with great success!")
+        if !config.async {
+            match visit_dirs(&config.src_dir.clone().unwrap(), &config) {
+                Ok(_) => {
+                    if config.verbose {
+                        println!("Compared everything, process ended with great success!")
+                    }
                 }
+                Err(err) => eprintln!("Error occured: {:?}", err),
             }
-            Err(err) => eprintln!("Error occured: {:?}", err),
+        } else {
+            match do_diff(&config) {
+                Ok(_) => {
+                    if config.verbose {
+                        println!("Compared everything, process ended with great success!")
+                    }
+                }
+                Err(err) => eprintln!("Error occured: {:?}", err),
+            }
         }
     } else if config.help {
         println!(
@@ -231,7 +242,6 @@ mod end_to_end {
             .unwrap();
     }
 
-    /* Linux only bug in /checkout/src/libcore/result.rs:906:4
     #[test]
     fn it_works_for_more_files_in_scr_than_dest() {
         if Path::new("tests/it_works_for_more_files_in_scr_than_dest/it_works_for_more_files_in_scr_than_dest_diff").exists() {
@@ -258,7 +268,7 @@ mod end_to_end {
             .succeeds()
             .unwrap();
     }
-*/
+
     #[test]
     fn it_works_when_diff_folder_is_not_created() {
         if Path::new("tests/it_works_when_diff_folder_is_not_created/it_works_when_diff_folder_is_not_created_diff").exists() {

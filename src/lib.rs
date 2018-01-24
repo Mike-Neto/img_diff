@@ -34,6 +34,8 @@ pub struct Config {
     pub verbose: bool,
     /// toogle help mode
     pub help: bool,
+    /// toggle sync algorithm
+    pub async: bool,
 }
 
 impl Config {
@@ -45,6 +47,7 @@ impl Config {
         opts.optopt("f", "diffDir", "set diff dir name", "");
         opts.optflag("v", "verbose", "toogle verbose mode");
         opts.optflag("h", "help", "print this help menu");
+        opts.optflag("t", "sync", "toggle sync algorithm");
 
         let matches = match opts.parse(&args[1..]) {
             Ok(m) => m,
@@ -52,8 +55,8 @@ impl Config {
         };
 
         let verbose = matches.opt_present("v");
-
         let help = matches.opt_present("h");
+        let async = matches.opt_present("t");
 
         let src_dir: Option<PathBuf> = match matches.opt_str("s") {
             Some(string) => Some(PathBuf::from(string)),
@@ -76,6 +79,7 @@ impl Config {
             diff_dir,
             verbose,
             help,
+            async,
         }
     }
 }
