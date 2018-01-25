@@ -43,6 +43,7 @@ fn main() {
 #[cfg(test)]
 mod end_to_end {
     extern crate assert_cli;
+    extern crate regex;
 
     use std::fs::File;
     use std::path::Path;
@@ -54,6 +55,7 @@ mod end_to_end {
             "tests/it_works_for_bmp_files/it_works_for_bmp_files_diff/rustacean-error.bmp",
         );
 
+        let regex = regex::Regex::new("0\n|0.0\n|0.68007237|3.7269595\n").unwrap();
         assert_cli::Assert::main_binary()
             .with_args(
                 &[
@@ -66,13 +68,7 @@ mod end_to_end {
                 ],
             )
             .stdout()
-            .contains("3.7269595")
-            .and()
-            .stdout()
-            .contains("0")
-            .and()
-            .stdout()
-            .contains("0.68007237")
+            .matches_ntimes(regex, 3)
             .succeeds()
             .unwrap();
 
@@ -173,6 +169,8 @@ mod end_to_end {
 
     #[test]
     fn it_works_for_diffrent_images() {
+        let regex = regex::Regex::new("Dssim[(]4.4469[0-9]{10}[)]\n").unwrap();
+
         assert_cli::Assert::main_binary()
             .with_args(
                 &[
@@ -185,8 +183,7 @@ mod end_to_end {
                 ],
             )
             .stdout()
-            //.is("Dssim(4.44694203487064)")
-            .contains("Dssim(4.4469")
+            .matches(regex)
             .succeeds()
             .unwrap();
     }
@@ -196,6 +193,8 @@ mod end_to_end {
         let _result = fs::remove_file(
             "tests/it_works_for_diffrent_images_and_produces_diff_file/it_works_for_diffrent_images_and_produces_diff_file_diff/rustacean-error.png-0.png",
         );
+
+        let regex = regex::Regex::new("Dssim[(]4.4469[0-9]{10}[)]\n").unwrap();
 
         assert_cli::Assert::main_binary()
             .with_args(
@@ -209,8 +208,7 @@ mod end_to_end {
                 ],
             )
             .stdout()
-            //.is("Dssim(4.44694203487064)")
-            .contains("Dssim(4.4469")
+            .matches(regex)
             .succeeds()
             .unwrap();
 
@@ -221,6 +219,8 @@ mod end_to_end {
 
     #[test]
     fn it_works_for_nested_folders() {
+        let regex_diff = regex::Regex::new("Dssim[(]4.4469[0-9]{10}[)]\n").unwrap();
+        let regex_equal = regex::Regex::new("Dssim[(]((0[.]0)|(0))+[)]\n").unwrap();
         assert_cli::Assert::main_binary()
             .with_args(
                 &[
@@ -233,11 +233,10 @@ mod end_to_end {
                 ],
             )
             .stdout()
-            .contains("Dssim(0)")
+            .matches_ntimes(regex_equal, 2)
             .and()
             .stdout()
-            .contains("Dssim(4.4469")
-            //.is("Dssim(0)\nDssim(4.44694203487064)\nDssim(0)") TODO(MiguelMendes): PR to allow this to be a RegEx
+            .matches(regex_diff)
             .succeeds()
             .unwrap();
     }
@@ -247,6 +246,9 @@ mod end_to_end {
         if Path::new("tests/it_works_for_more_files_in_scr_than_dest/it_works_for_more_files_in_scr_than_dest_diff").exists() {
             let _result = fs::remove_dir_all("tests/it_works_for_more_files_in_scr_than_dest/it_works_for_more_files_in_scr_than_dest_diff");
         }
+
+        let regex_diff = regex::Regex::new("Dssim[(]4.4469[0-9]{10}[)]\n").unwrap();
+        let regex_equal = regex::Regex::new("Dssim[(]0(.0)*[)]\n").unwrap();
 
         assert_cli::Assert::main_binary()
             .with_args(
@@ -260,11 +262,10 @@ mod end_to_end {
                 ],
             )
             .stdout()
-            //.is("Dssim(0)\nDssim(4.44694203487064)")
-            .contains("Dssim(0)")
+            .matches(regex_diff)
             .and()
             .stdout()
-            .contains("Dssim(4.4469")
+            .matches(regex_equal)
             .succeeds()
             .unwrap();
     }
@@ -274,6 +275,10 @@ mod end_to_end {
         if Path::new("tests/it_works_when_diff_folder_is_not_created/it_works_when_diff_folder_is_not_created_diff").exists() {
             let _result = fs::remove_dir_all("tests/it_works_when_diff_folder_is_not_created/it_works_when_diff_folder_is_not_created_diff");
         }
+
+        let regex_diff = regex::Regex::new("Dssim[(]4.4469[0-9]{10}[)]\n").unwrap();
+        let regex_equal = regex::Regex::new("Dssim[(]0(.0)*[)]\n").unwrap();
+
 
         assert_cli::Assert::main_binary()
             .with_args(
@@ -287,11 +292,10 @@ mod end_to_end {
                 ],
             )
             .stdout()
-            //.is("Dssim(0)\nDssim(4.44694203487064)\nDssim(0)")
-            .contains("Dssim(0)")
+            .matches(regex_diff)
             .and()
             .stdout()
-            .contains("Dssim(4.4469")
+            .matches(regex_equal)
             .succeeds()
             .unwrap();
     }
