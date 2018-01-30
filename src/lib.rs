@@ -252,12 +252,12 @@ pub fn do_diff(config: &Config) -> io::Result<()> {
                             config,
                         );
                         output_diff_files(diff_file_name, ssim_maps);
-                    }
-                    if config.verbose {
-                        eprintln!(
-                            "diff found in file: {:?}",
-                            String::from(src_img.path.to_str().unwrap())
-                        );
+                        if config.verbose {
+                            eprintln!(
+                                "diff found in file: {:?}",
+                                String::from(src_img.path.to_str().unwrap())
+                            );
+                        }
                     }
                 }
             }
