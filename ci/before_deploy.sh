@@ -8,7 +8,7 @@ main() {
 
     case $TRAVIS_OS_NAME in
         linux)
-            stage=$(mktemp -d -t tmp)
+            stage=$(mktemp -d)
             ;;
         osx)
             stage=$(mktemp -d -t tmp)
