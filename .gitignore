@@ -1,3 +1,6 @@
-
+# Default Rust Ignores
 /target/
 **/*.rs.bk
+
+# IDE
+/.idea
