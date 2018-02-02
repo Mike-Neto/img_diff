@@ -4,3 +4,6 @@
 
 # IDE
 /.idea
+
+# Test results
+/tests/**/*_diff/*.*

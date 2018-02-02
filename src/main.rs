@@ -169,7 +169,7 @@ mod end_to_end {
 
     #[test]
     fn it_works_for_diffrent_images() {
-        let regex = regex::Regex::new("Dssim[(]4.4469[0-9]{10}[)]\n").unwrap();
+        let regex = regex::Regex::new("Dssim[(]4.4469[0-9]{10,11}[)]\n").unwrap();
 
         assert_cli::Assert::main_binary()
             .with_args(
@@ -194,7 +194,7 @@ mod end_to_end {
             "tests/it_works_for_diffrent_images_and_produces_diff_file/it_works_for_diffrent_images_and_produces_diff_file_diff/rustacean-error.png-0.png",
         );
 
-        let regex = regex::Regex::new("Dssim[(]4.4469[0-9]{10}[)]\n").unwrap();
+        let regex = regex::Regex::new("Dssim[(]4.4469[0-9]{10,11}[)]\n").unwrap();
 
         assert_cli::Assert::main_binary()
             .with_args(
@@ -219,7 +219,7 @@ mod end_to_end {
 
     #[test]
     fn it_works_for_nested_folders() {
-        let regex_diff = regex::Regex::new("Dssim[(]4.4469[0-9]{10}[)]\n").unwrap();
+        let regex_diff = regex::Regex::new("Dssim[(]4.4469[0-9]{10,11}[)]\n").unwrap();
         let regex_equal = regex::Regex::new("Dssim[(]((0[.]0)|(0))+[)]\n").unwrap();
         assert_cli::Assert::main_binary()
             .with_args(
@@ -247,7 +247,7 @@ mod end_to_end {
             let _result = fs::remove_dir_all("tests/it_works_for_more_files_in_scr_than_dest/it_works_for_more_files_in_scr_than_dest_diff");
         }
 
-        let regex_diff = regex::Regex::new("Dssim[(]4.4469[0-9]{10}[)]\n").unwrap();
+        let regex_diff = regex::Regex::new("Dssim[(]4.4469[0-9]{10,11}[)]\n").unwrap();
         let regex_equal = regex::Regex::new("Dssim[(]0(.0)*[)]\n").unwrap();
 
         assert_cli::Assert::main_binary()
@@ -276,7 +276,7 @@ mod end_to_end {
             let _result = fs::remove_dir_all("tests/it_works_when_diff_folder_is_not_created/it_works_when_diff_folder_is_not_created_diff");
         }
 
-        let regex_diff = regex::Regex::new("Dssim[(]4.4469[0-9]{10}[)]\n").unwrap();
+        let regex_diff = regex::Regex::new("Dssim[(]4.4469[0-9]{10,11}[)]\n").unwrap();
         let regex_equal = regex::Regex::new("Dssim[(]0(.0)*[)]\n").unwrap();
 
 
