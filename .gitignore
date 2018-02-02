@@ -6,4 +6,4 @@
 /.idea
 
 # Test results
-/tests/**/*_diff/*.*
+/tests/**/*_diff/**/*.*
