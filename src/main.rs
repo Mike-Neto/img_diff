@@ -68,7 +68,7 @@ mod end_to_end {
                 ],
             )
             .stdout()
-            .matches_ntimes(regex, 3)
+            .satisfies(move |x| regex.find_iter(x).count() == 3, "different output ")
             .succeeds()
             .unwrap();
 
@@ -143,7 +143,7 @@ mod end_to_end {
                 ],
             )
             .stdout()
-            .is("Dssim(0)")
+            .is("Dssim(0.0)")
             .succeeds()
             .unwrap();
     }
@@ -162,7 +162,7 @@ mod end_to_end {
                 ],
             )
             .stdout()
-            .is("Dssim(0)")
+            .is("Dssim(0.0)")
             .succeeds()
             .unwrap();
     }
@@ -183,7 +183,7 @@ mod end_to_end {
                 ],
             )
             .stdout()
-            .matches(regex)
+            .satisfies(move |x| regex.is_match(x), "wrong format ")
             .succeeds()
             .unwrap();
     }
@@ -208,7 +208,7 @@ mod end_to_end {
                 ],
             )
             .stdout()
-            .matches(regex)
+            .satisfies(move |x| regex.is_match(x), "wrong format ")
             .succeeds()
             .unwrap();
 
@@ -233,10 +233,10 @@ mod end_to_end {
                 ],
             )
             .stdout()
-            .matches_ntimes(regex_equal, 2)
+            .satisfies(move |x| regex_equal.find_iter(x).count() == 2, "different output ")
             .and()
             .stdout()
-            .matches(regex_diff)
+            .satisfies(move |x| regex_diff.is_match(x), "different diff ")
             .succeeds()
             .unwrap();
     }
@@ -262,10 +262,10 @@ mod end_to_end {
                 ],
             )
             .stdout()
-            .matches(regex_diff)
+            .satisfies(move |x| regex_diff.is_match(x), "different diff ")
             .and()
             .stdout()
-            .matches(regex_equal)
+            .satisfies(move |x| regex_equal.is_match(x), "different equal ")
             .succeeds()
             .unwrap();
     }
@@ -292,10 +292,10 @@ mod end_to_end {
                 ],
             )
             .stdout()
-            .matches(regex_diff)
+            .satisfies(move |x| regex_diff.is_match(x), "different diff ")
             .and()
             .stdout()
-            .matches(regex_equal)
+            .satisfies(move |x| regex_equal.is_match(x), "different equal ")
             .succeeds()
             .unwrap();
     }
