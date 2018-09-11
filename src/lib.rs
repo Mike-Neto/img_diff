@@ -399,18 +399,15 @@ fn create_path(path: &Path) {
 
 /// recursive way to create folders hierarchies
 fn create_dir_if_not_there(mut buffer: PathBuf) -> PathBuf {
-    if buffer == Path::new("") {
-        buffer
-    } else {
-        buffer.pop();
+    if buffer.pop() {
         let temp_buffer = buffer.clone();
 
         create_dir_if_not_there(temp_buffer);
         if !buffer.exists() && buffer != Path::new("") {
             fs::create_dir(&buffer).unwrap();
         }
-        buffer
     }
+    buffer
 }
 
 /// Helper float to byte

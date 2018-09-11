@@ -44,15 +44,18 @@ fn main() {
 mod end_to_end {
     extern crate assert_cli;
     extern crate regex;
+    extern crate tempdir;
 
     use std::fs::File;
-    use std::path::Path;
     use std::fs;
+    use self::tempdir::TempDir;
 
     #[test]
     fn it_works_for_bmp_files() {
+        let diff = TempDir::new("it_works_for_bmp_files_diff").unwrap();
+
         let _result = fs::remove_file(
-            "tests/it_works_for_bmp_files/it_works_for_bmp_files_diff/rustacean-error.bmp",
+            diff.path().join("rustacean-error.bmp"),
         );
 
         let regex = regex::Regex::new("0\n|0.0\n|0.68007237|3.7269595\n").unwrap();
@@ -64,17 +67,17 @@ mod end_to_end {
                     "-d",
                     "tests/it_works_for_bmp_files/it_works_for_bmp_files_dest",
                     "-f",
-                    "tests/it_works_for_bmp_files/it_works_for_bmp_files_diff",
+                    diff.path().to_str().unwrap(),
                 ],
             )
             .stdout()
-            .matches_ntimes(regex, 3)
+            .satisfies(move |x| regex.find_iter(x).count() == 3, "different output ")
             .succeeds()
             .unwrap();
 
         assert!(
             File::open(
-                "tests/it_works_for_bmp_files/it_works_for_bmp_files_diff/rustacean-error.bmp",
+                diff.path().join("rustacean-error.bmp"),
             ).is_ok()
         );
     }
@@ -131,6 +134,7 @@ mod end_to_end {
 
     #[test]
     fn it_works_for_equal_images() {
+        let diff = TempDir::new("it_works_for_equal_images_diff").unwrap();
         assert_cli::Assert::main_binary()
             .with_args(
                 &[
@@ -139,17 +143,19 @@ mod end_to_end {
                     "-d",
                     "tests/it_works_for_equal_images/it_works_for_equal_images_dest",
                     "-f",
-                    "tests/it_works_for_equal_images/it_works_for_equal_images_diff",
+                    diff.path().to_str().unwrap(),
                 ],
             )
             .stdout()
-            .is("Dssim(0)")
+            .is("Dssim(0.0)")
             .succeeds()
             .unwrap();
     }
 
     #[test]
     fn it_works_for_equal_images_without_diff_folder_been_created() {
+        let temp = TempDir::new("it_works_for_equal_images_without_diff_folder_been_created_diff").unwrap();
+        let path = temp.path().join("it_works_for_equal_images_without_diff_folder_been_created_diff");
         assert_cli::Assert::main_binary()
             .with_args(
                 &[
@@ -158,17 +164,18 @@ mod end_to_end {
                     "-d",
                     "tests/it_works_for_equal_images_without_diff_folder_been_created/it_works_for_equal_images_without_diff_folder_been_created_dest",
                     "-f",
-                    "tests/it_works_for_equal_images_without_diff_folder_been_created/it_works_for_equal_images_without_diff_folder_been_created_diff",
+                    path.to_str().unwrap(),
                 ],
             )
             .stdout()
-            .is("Dssim(0)")
+            .is("Dssim(0.0)")
             .succeeds()
             .unwrap();
     }
 
     #[test]
     fn it_works_for_diffrent_images() {
+        let diff = TempDir::new("it_works_for_diffrent_images_diff").unwrap();
         let regex = regex::Regex::new("Dssim[(]4.4469[0-9]{10,11}[)]\n").unwrap();
 
         assert_cli::Assert::main_binary()
@@ -179,21 +186,18 @@ mod end_to_end {
                     "-d",
                     "tests/it_works_for_diffrent_images/it_works_for_diffrent_images_dest",
                     "-f",
-                    "tests/it_works_for_diffrent_images/it_works_for_diffrent_images_diff",
+                    diff.path().to_str().unwrap(),
                 ],
             )
             .stdout()
-            .matches(regex)
+            .satisfies(move |x| regex.is_match(x), "wrong format ")
             .succeeds()
             .unwrap();
     }
 
     #[test]
     fn it_works_for_diffrent_images_and_produces_diff_file() {
-        let _result = fs::remove_file(
-            "tests/it_works_for_diffrent_images_and_produces_diff_file/it_works_for_diffrent_images_and_produces_diff_file_diff/rustacean-error.png-0.png",
-        );
-
+        let diff = TempDir::new("it_works_for_diffrent_images_and_produces_diff_file_diff").unwrap();
         let regex = regex::Regex::new("Dssim[(]4.4469[0-9]{10,11}[)]\n").unwrap();
 
         assert_cli::Assert::main_binary()
@@ -204,21 +208,22 @@ mod end_to_end {
                     "-d",
                     "tests/it_works_for_diffrent_images_and_produces_diff_file/it_works_for_diffrent_images_and_produces_diff_file_dest",
                     "-f",
-                    "tests/it_works_for_diffrent_images_and_produces_diff_file/it_works_for_diffrent_images_and_produces_diff_file_diff",
+                    diff.path().to_str().unwrap(),
                 ],
             )
             .stdout()
-            .matches(regex)
+            .satisfies(move |x| regex.is_match(x), "wrong format ")
             .succeeds()
             .unwrap();
 
         assert!(File::open(
-            "tests/it_works_for_diffrent_images_and_produces_diff_file/it_works_for_diffrent_images_and_produces_diff_file_diff/rustacean-error.png-0.png",
+            diff.path().join("rustacean-error.png-0.png"),
         ).is_ok());
     }
 
     #[test]
     fn it_works_for_nested_folders() {
+        let diff = TempDir::new("it_works_for_nested_folders_diff").unwrap();
         let regex_diff = regex::Regex::new("Dssim[(]4.4469[0-9]{10,11}[)]\n").unwrap();
         let regex_equal = regex::Regex::new("Dssim[(]((0[.]0)|(0))+[)]\n").unwrap();
         assert_cli::Assert::main_binary()
@@ -229,24 +234,21 @@ mod end_to_end {
                     "-d",
                     "tests/it_works_for_nested_folders/it_works_for_nested_folders_dest",
                     "-f",
-                    "tests/it_works_for_nested_folders/it_works_for_nested_folders_diff",
+                    diff.path().to_str().unwrap(),
                 ],
             )
             .stdout()
-            .matches_ntimes(regex_equal, 2)
+            .satisfies(move |x| regex_equal.find_iter(x).count() == 2, "different output ")
             .and()
             .stdout()
-            .matches(regex_diff)
+            .satisfies(move |x| regex_diff.is_match(x), "different diff ")
             .succeeds()
             .unwrap();
     }
 
     #[test]
     fn it_works_for_more_files_in_scr_than_dest() {
-        if Path::new("tests/it_works_for_more_files_in_scr_than_dest/it_works_for_more_files_in_scr_than_dest_diff").exists() {
-            let _result = fs::remove_dir_all("tests/it_works_for_more_files_in_scr_than_dest/it_works_for_more_files_in_scr_than_dest_diff");
-        }
-
+        let diff = TempDir::new("it_works_for_more_files_in_scr_than_dest_diff").unwrap();
         let regex_diff = regex::Regex::new("Dssim[(]4.4469[0-9]{10,11}[)]\n").unwrap();
         let regex_equal = regex::Regex::new("Dssim[(]0(.0)*[)]\n").unwrap();
 
@@ -258,23 +260,22 @@ mod end_to_end {
                     "-d",
                     "tests/it_works_for_more_files_in_scr_than_dest/it_works_for_more_files_in_scr_than_dest_dest",
                     "-f",
-                    "tests/it_works_for_more_files_in_scr_than_dest/it_works_for_more_files_in_scr_than_dest_diff",
+                    diff.path().to_str().unwrap(),
                 ],
             )
             .stdout()
-            .matches(regex_diff)
+            .satisfies(move |x| regex_diff.is_match(x), "different diff ")
             .and()
             .stdout()
-            .matches(regex_equal)
+            .satisfies(move |x| regex_equal.is_match(x), "different equal ")
             .succeeds()
             .unwrap();
     }
 
     #[test]
     fn it_works_when_diff_folder_is_not_created() {
-        if Path::new("tests/it_works_when_diff_folder_is_not_created/it_works_when_diff_folder_is_not_created_diff").exists() {
-            let _result = fs::remove_dir_all("tests/it_works_when_diff_folder_is_not_created/it_works_when_diff_folder_is_not_created_diff");
-        }
+        let temp = TempDir::new("it_works_when_diff_folder_is_not_created").unwrap();
+        let path = temp.path().join("it_works_when_diff_folder_is_not_created_diff");
 
         let regex_diff = regex::Regex::new("Dssim[(]4.4469[0-9]{10,11}[)]\n").unwrap();
         let regex_equal = regex::Regex::new("Dssim[(]0(.0)*[)]\n").unwrap();
@@ -288,14 +289,14 @@ mod end_to_end {
                     "-d",
                     "tests/it_works_when_diff_folder_is_not_created/it_works_when_diff_folder_is_not_created_dest",
                     "-f",
-                    "tests/it_works_when_diff_folder_is_not_created/it_works_when_diff_folder_is_not_created_diff",
+                    path.to_str().unwrap(),
                 ],
             )
             .stdout()
-            .matches(regex_diff)
+            .satisfies(move |x| regex_diff.is_match(x), "different diff ")
             .and()
             .stdout()
-            .matches(regex_equal)
+            .satisfies(move |x| regex_equal.is_match(x), "different equal ")
             .succeeds()
             .unwrap();
     }
@@ -312,6 +313,7 @@ mod end_to_end {
 
     #[test]
     fn when_in_verbose_mode_prints_each_file_compare() {
+        let diff = TempDir::new("it_works_for_equal_images_diff").unwrap();
         assert_cli::Assert::main_binary()
             .with_args(
                 &[
@@ -321,7 +323,7 @@ mod end_to_end {
                     "-d",
                     "tests/it_works_for_equal_images/it_works_for_equal_images_dest",
                     "-f",
-                    "tests/it_works_for_equal_images/it_works_for_equal_images_diff",
+                    diff.path().to_str().unwrap(),
                 ],
             )
             .stdout()
@@ -332,6 +334,7 @@ mod end_to_end {
 
     #[test]
     fn when_in_verbose_mode_prints_each_file_diff_to_stderr() {
+        let diff = TempDir::new("it_works_for_diffrent_images_diff").unwrap();
         assert_cli::Assert::main_binary()
             .with_args(
                 &[
@@ -341,7 +344,7 @@ mod end_to_end {
                     "-d",
                     "tests/it_works_for_diffrent_images/it_works_for_diffrent_images_dest",
                     "-f",
-                    "tests/it_works_for_diffrent_images/it_works_for_diffrent_images_diff",
+                    diff.path().to_str().unwrap(),
                 ],
             )
             .stderr()
