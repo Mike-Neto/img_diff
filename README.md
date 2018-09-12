@@ -9,24 +9,41 @@ Rust based Command line tool to diff images in 2 structurally similar folders an
 
 Comparison is done using [the SSIM algorithm](https://ece.uwaterloo.ca/~z70wang/research/ssim/) at multiple weighed resolutions and relies on the [dssim](https://crates.io/crates/dssim) crate for the comparisons of png images.
 
-BMP files are compared using a by pixel sample algorithm and the output is the MOD of the diffrence between each of the
+BMP files are compared using a by pixel sample algorithm and the output is the MOD of the difference between each of the
 pixel components (rgb)
 
 The value returned is 1/SSIM-1, where 0 means identical image, and >0 (unbounded) is amount of difference for PNG.
 
-The value returned for bmp images 0 if images are equal and a positive number that scales with the amout of diffrences.
+The value returned for bmp images 0 if images are equal and a positive number that scales with the amount of differences.
 
 ## Future Features
 
 * Support multiple format's of images (JPEG).
 * Allow for a threshold to output diff file.
-* Provide a single unit of diffrence.
+* Provide a single unit of difference.
 
 ## Usage
 
-    img_diff -s path\to\images -d path\to\images\to\compare -f path\to\output\diff\images
+    img_diff -s path\to\images -d path\to\images\to\compare -f path\to\output\diff\images -t
 
-Will go trough all the files in the -s dir and subdir's and compare them to the ones in the -d outputing diff files if a difrence is found to -f dir.
+Will go trough all the files in the -s dir and subdir's and compare them to the ones in the -d outputting diff files if a difference is found to -f dir.
+
+	-v
+
+enables verbose mode
+
+	-t
+
+enable multi-threaded mode, this is faster on multi-core machines.
+
+## Usage in CI
+
+	img_diff -s path\to\images -d path\to\images\to\compare -f path\to\output\diff\images -v -t 2> results/output.txt
+
+This will enable verbose output and enable the results of failed comparisons to be put into output.txt
+We can use this to enable CI with
+	
+	if [[ -s results/output.txt ]]; then exit 1; else exit 0; fi
 
 ## Compile from source
      git clone https://github.com/Mike-Neto/img_diff.git
@@ -42,11 +59,13 @@ Will go trough all the files in the -s dir and subdir's and compare them to the 
 ## Crate
 [Crates.io](https://crates.io/crates/img_diff)
 
-## Build or Download
+## Download
 
 You need [Rust](https://www.rust-lang.org/en-US/install.html)
 
     cargo install img_diff
+
+You can also download a binary release for your platform on [github releases](https://github.com/Mike-Neto/img_diff/releases/latest)
 
 ## License
 
