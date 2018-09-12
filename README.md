@@ -37,7 +37,6 @@ enables verbose mode
 enable multi-threaded mode, this is faster on multi-core machines.
 
 ## Usage in CI
-
 	img_diff -s path\to\images -d path\to\images\to\compare -f path\to\output\diff\images -v -t 2> results/output.txt
 
 This will enable verbose output and enable the results of failed comparisons to be put into output.txt
@@ -49,6 +48,10 @@ We can use this to enable CI with
      git clone https://github.com/Mike-Neto/img_diff.git
      cd img_diff
      cargo build --release
+
+## Build all files
+	cargo build && cargo test && cargo bench --no-run
+	cargo +nightly build && cargo +nightly test && cargo +nightly bench --no-run
 
 ## Test
 	cargo test
