@@ -24,20 +24,17 @@ The value returned for bmp images 0 if images are equal and a positive number th
 
 ## Usage
 
-    img_diff -s path\to\images -d path\to\images\to\compare -f path\to\output\diff\images -t
+    img_diff -s path\to\images -d path\to\images\to\compare -f path\to\output\diff\images
 
 Will go trough all the files in the -s dir and subdir's and compare them to the ones in the -d outputting diff files if a difference is found to -f dir.
 
 	-v
 
-enables verbose mode
+enables verbose mode and output to stderr.
 
-	-t
-
-enable multi-threaded mode, this is faster on multi-core machines.
 
 ## Usage in CI
-	img_diff -s path\to\images -d path\to\images\to\compare -f path\to\output\diff\images -v -t 2> results/output.txt
+	img_diff -s path\to\images -d path\to\images\to\compare -f path\to\output\diff\images -v 2> results/output.txt
 
 This will enable verbose output and enable the results of failed comparisons to be put into output.txt
 We can use this to enable CI with
@@ -69,6 +66,12 @@ You need [Rust](https://www.rust-lang.org/en-US/install.html)
     cargo install img_diff
 
 You can also download a binary release for your platform on [github releases](https://github.com/Mike-Neto/img_diff/releases/latest)
+
+## Changelog
+
+### From 2.1.0
+Removed Multi-threaded flag making that the default.
+Upgraded to Rust Edition 2018
 
 ## License
 
