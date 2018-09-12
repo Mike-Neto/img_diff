@@ -71,6 +71,7 @@ You can also download a binary release for your platform on [github releases](ht
 
 ### From 2.1.0
 Removed Multi-threaded flag making that the default.
+
 Upgraded to Rust Edition 2018
 
 ## License
