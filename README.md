@@ -48,6 +48,7 @@ We can use this to enable CI with
 
 ## Build all files
 	cargo build && cargo test && cargo bench --no-run
+    cargo +beta build && cargo +beta test && cargo +beta bench --no-run
 	cargo +nightly build && cargo +nightly test && cargo +nightly bench --no-run
 
 ## Test
