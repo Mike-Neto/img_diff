@@ -147,13 +147,13 @@ pub fn do_diff(config: &Config) -> io::Result<()> {
                     for (x, y) in src_bmp_img.coordinates() {
                         let dest_pixel = dest_bmp_img.get_pixel(x, y);
                         let src_pixel = src_bmp_img.get_pixel(x, y);
-                        let diff_pixel = subtract(&src_pixel, &dest_pixel);
-                        diff_value += interpolate(&diff_pixel);
+                        let diff_pixel = subtract(src_pixel, dest_pixel);
+                        diff_value += interpolate(diff_pixel);
                         diff_image.set_pixel(x, y, diff_pixel);
                     }
                     print_diff_result(config.verbose, &src_img.path, diff_value);
                     let diff_file_name = get_diff_file_name_and_validate_path(
-                        String::from(dest_img.path.to_str().unwrap()),
+                        dest_img.path.to_str().unwrap(),
                         config,
                     );
                     if diff_value != 0.0 {
@@ -165,7 +165,7 @@ pub fn do_diff(config: &Config) -> io::Result<()> {
                         }
                         // Use another tread to write the files as necessary
                         let handle =
-                            thread::spawn(move || output_bmp(diff_file_name, Some(diff_image)));
+                            thread::spawn(move || output_bmp(&diff_file_name, Some(diff_image)));
                         handle.join().unwrap();
                     }
                 } else {
@@ -186,10 +186,10 @@ pub fn do_diff(config: &Config) -> io::Result<()> {
                     print_diff_result(config.verbose, &src_img.path, ssim_diff_value);
                     if ssim_diff_value != 0.0 {
                         let diff_file_name = get_diff_file_name_and_validate_path(
-                            String::from(dest_img.path.to_str().unwrap()),
+                            dest_img.path.to_str().unwrap(),
                             config,
                         );
-                        output_diff_files(diff_file_name, ssim_maps);
+                        output_diff_files(&diff_file_name, &ssim_maps);
                         if config.verbose {
                             eprintln!(
                                 "diff found in file: {:?}",
@@ -230,8 +230,8 @@ fn find_all_files_to_load(dir: PathBuf, config: &Config) -> io::Result<Vec<(Path
     Ok(files)
 }
 
-/// helper to create necessary folders for IO operations to be successfull
-fn get_diff_file_name_and_validate_path(dest_file_name: String, config: &Config) -> String {
+/// helper to create necessary folders for IO operations to be successful
+fn get_diff_file_name_and_validate_path(dest_file_name: &str, config: &Config) -> String {
     let diff_file_name = dest_file_name.replace(
         config.dest_dir.clone().unwrap().to_str().unwrap(),
         config.diff_dir.clone().unwrap().to_str().unwrap(),
@@ -250,14 +250,11 @@ fn get_diff_file_name_and_validate_path(dest_file_name: String, config: &Config)
 }
 
 /// saves bmp file diff to disk
-fn output_bmp(path_name: String, image: Option<bmp::Image>) {
-    match image {
-        Some(image) => {
-            let _ = image.save(&path_name).unwrap_or_else(|e| {
-                eprintln!("Failed to save diff_file: {}\nError: {}", path_name, e)
-            });
-        }
-        None => (),
+fn output_bmp(path_name: &str, image: Option<bmp::Image>) {
+    if let Some(image) = image {
+        image
+            .save(&path_name)
+            .unwrap_or_else(|e| eprintln!("Failed to save diff_file: {}\nError: {}", path_name, e));
     }
 }
 
@@ -273,11 +270,11 @@ fn print_diff_result<T: std::fmt::Debug>(verbose: bool, entry: &PathBuf, diff_va
     }
 }
 
-fn interpolate(p: &bmp::Pixel) -> f32 {
-    ((p.r / 3) + (p.g / 3) + (p.b / 3)) as f32 / 10000000.0
+fn interpolate(p: bmp::Pixel) -> f32 {
+    f32::from((p.r / 3) + (p.g / 3) + (p.b / 3)) / 10_000_000.0
 }
 
-fn subtract(p1: &bmp::Pixel, p2: &bmp::Pixel) -> bmp::Pixel {
+fn subtract(p1: bmp::Pixel, p2: bmp::Pixel) -> bmp::Pixel {
     let r;
     let g;
     let b;
@@ -335,7 +332,7 @@ fn to_byte(i: f32) -> u8 {
 }
 
 /// Creates a saves a png with the img diff to config.diff folder
-fn output_diff_files(path_name: String, ssim_maps: Vec<SsimMap>) {
+fn output_diff_files(path_name: &str, ssim_maps: &[SsimMap]) {
     ssim_maps.par_iter().enumerate().for_each(|(n, map_meta)| {
         let avgssim = map_meta.ssim as f32;
         let out: Vec<_> = map_meta
