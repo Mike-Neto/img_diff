@@ -3,14 +3,10 @@
 //! `img_diff` is a cmd line tool to diff images in 2 folders
 //! you can pass -h to see the help
 //!
-extern crate getopts;
-extern crate dssim;
-extern crate rayon;
-extern crate rgb;
-extern crate lodepng;
-extern crate imgref;
-extern crate bmp;
-
+use dssim;
+use rgb;
+use lodepng;
+use bmp;
 use std::path::{Path, PathBuf};
 use getopts::Options;
 use std::fs;
@@ -34,8 +30,6 @@ pub struct Config {
     pub verbose: bool,
     /// toogle help mode
     pub help: bool,
-    /// toggle sync algorithm
-    pub async: bool,
 }
 
 impl Config {
@@ -56,7 +50,6 @@ impl Config {
 
         let verbose = matches.opt_present("v");
         let help = matches.opt_present("h");
-        let async = matches.opt_present("t");
 
         let src_dir: Option<PathBuf> = match matches.opt_str("s") {
             Some(string) => Some(PathBuf::from(string)),
@@ -79,71 +72,8 @@ impl Config {
             diff_dir,
             verbose,
             help,
-            async,
         }
     }
-}
-
-/// Recursive method that does the comparison for each image in each folder
-pub fn visit_dirs(dir: &PathBuf, config: &Config) -> io::Result<()> {
-    if dir.is_dir() {
-        for entry in fs::read_dir(dir)? {
-            let entry = entry?;
-            let path = entry.path();
-            if path.is_dir() {
-                visit_dirs(&path, &config)?;
-            } else {
-                let dest_file_name =
-                    entry.path().to_str().unwrap().replace(
-                        config.src_dir.clone().unwrap().to_str().unwrap(),
-                        config
-                            .dest_dir
-                            .clone()
-                            .unwrap()
-                            .to_str()
-                            .unwrap(),
-                    );
-
-                if Path::new(&dest_file_name).exists() {
-                    let file_extension = entry
-                        .path()
-                        .extension()
-                        .unwrap()
-                        .to_str()
-                        .unwrap()
-                        .to_lowercase();
-                    if file_extension == "bmp" {
-                        let (diff_value, diff_image) = compare_bmp(&entry, &dest_file_name);
-                        print_diff_result(config.verbose, &entry.path(), diff_value);
-                        if diff_value != 0.0 {
-                            let diff_file_name =
-                                get_diff_file_name_and_validate_path(dest_file_name, config);
-                            output_bmp(diff_file_name, diff_image);
-                            if config.verbose {
-                                eprintln!("diff found in file: {:?}", entry.path());
-                            }
-                        }
-                    } else {
-                        let mut attr = dssim::Dssim::new();
-                        let g1 = attr.create_image(&load(entry.path()).unwrap()).unwrap();
-                        let g2 = attr.create_image(&load(&dest_file_name).unwrap()).unwrap();
-                        attr.set_save_ssim_maps(1);
-                        let (ssim_diff_value, ssim_maps) = attr.compare(&g1, g2);
-                        print_diff_result(config.verbose, &entry.path(), ssim_diff_value);
-                        if ssim_diff_value != 0.0 {
-                            let diff_file_name =
-                                get_diff_file_name_and_validate_path(dest_file_name, config);
-                            output_diff_files(diff_file_name, ssim_maps);
-                        }
-                        if config.verbose {
-                            eprintln!("diff found in file: {:?}", entry.path());
-                        }
-                    }
-                }
-            }
-        }
-    }
-    Ok(())
 }
 
 enum ImageType {
@@ -156,7 +86,7 @@ struct Image {
     image: ImageType,
 }
 
-/// Parallel and diffrent algorithm implementation of visit_dirs
+/// Diffs all images using a channel to pararelize the file IO and processing.
 pub fn do_diff(config: &Config) -> io::Result<()> {
     // Get a full list of all images to load (scr and dest pairs)
     let files_to_load = find_all_files_to_load(config.src_dir.clone().unwrap(), &config)?;
@@ -179,9 +109,10 @@ pub fn do_diff(config: &Config) -> io::Result<()> {
                 path: dest_path.clone(),
                 image: ImageType::BMP(bmp::open(dest_path)),
             };
+
             transmitter.send((src_img, dest_img)).unwrap();
         } else {
-            let mut attr = dssim::Dssim::new();
+            let attr = dssim::Dssim::new();
             let src_img = Image {
                 path: scr_path.clone(),
                 image: ImageType::PNG(Ok(attr.create_image(&load(scr_path).unwrap()).unwrap())),
@@ -190,6 +121,7 @@ pub fn do_diff(config: &Config) -> io::Result<()> {
                 path: dest_path.clone(),
                 image: ImageType::PNG(Ok(attr.create_image(&load(dest_path).unwrap()).unwrap())),
             };
+
             transmitter.send((src_img, dest_img)).unwrap();
         }
     });
@@ -232,6 +164,8 @@ pub fn do_diff(config: &Config) -> io::Result<()> {
                             thread::spawn(move || output_bmp(diff_file_name, Some(diff_image)));
                         handle.join().unwrap();
                     }
+                } else {
+                    println!("kek");
                 }
             }
             ImageType::PNG(src_image) => {
@@ -262,8 +196,8 @@ pub fn do_diff(config: &Config) -> io::Result<()> {
                 }
             }
         };
-
     }
+
     Ok(())
 }
 
@@ -278,7 +212,10 @@ fn find_all_files_to_load(dir: PathBuf, config: &Config) -> io::Result<Vec<(Path
                     config.src_dir.clone().unwrap().to_str().unwrap(),
                     config.dest_dir.clone().unwrap().to_str().unwrap(),
                 );
-            files.push((entry, PathBuf::from(dest_file_name)));
+            let dest_path = PathBuf::from(dest_file_name);
+            if dest_path.exists() {
+                files.push((entry, dest_path));
+            }
         } else {
             let child_files = find_all_files_to_load(entry, &config)?;
             //TODO(MiguelMendes): 1 liner for this? // join vec?
@@ -333,31 +270,6 @@ fn print_diff_result<T: std::fmt::Debug>(verbose: bool, entry: &PathBuf, diff_va
     } else {
         println!("{:?}", diff_value);
     }
-}
-
-/// load and compare bmp files
-fn compare_bmp(entry: &fs::DirEntry, dest_file_name: &String) -> (f32, Option<bmp::Image>) {
-    let src_img = bmp::open(entry.path());
-    let dest_img = bmp::open(dest_file_name);
-    let mut diff_value = 0.0;
-
-    if src_img.is_ok() && dest_img.is_ok() {
-        let src_img = src_img.unwrap();
-        let dest_img = dest_img.unwrap();
-
-        let mut diff_image = bmp::Image::new(src_img.get_width(), src_img.get_height());
-        //TODO(MiguelMendes): Thread this
-        for (x, y) in src_img.coordinates() {
-            let dest_pixel = dest_img.get_pixel(x, y);
-            let src_pixel = src_img.get_pixel(x, y);
-            let diff_pixel = subtract(&src_pixel, &dest_pixel);
-            diff_value += interpolate(&diff_pixel);
-            diff_image.set_pixel(x, y, diff_pixel);
-        }
-        return (diff_value, Some(diff_image));
-    }
-
-    (diff_value, None)
 }
 
 fn interpolate(p: &bmp::Pixel) -> f32 {

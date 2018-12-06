@@ -2,6 +2,7 @@
 name = "img_diff"
 version = "2.1.0"
 authors = ["Miguel Mendes <miguelmendeseiriz@gmail.com>"]
+edition = '2018'
 description = "Command line tool to diff images in 2 structurally similar folders and output diff images."
 license = "MIT"
 repository = "https://github.com/Mike-Neto/img_diff"

@@ -1,7 +1,5 @@
-extern crate img_diff;
-
 use std::env;
-use img_diff::{Config, visit_dirs, do_diff};
+use img_diff::{Config, do_diff};
 
 fn main() {
     let args: Vec<String> = env::args().collect();
@@ -12,24 +10,13 @@ fn main() {
     }
 
     if config.src_dir.is_some() && config.dest_dir.is_some() && config.diff_dir.is_some() {
-        if !config.async {
-            match visit_dirs(&config.src_dir.clone().unwrap(), &config) {
-                Ok(_) => {
-                    if config.verbose {
-                        println!("Compared everything, process ended with great success!")
-                    }
+        match do_diff(&config) {
+            Ok(_) => {
+                if config.verbose {
+                    println!("Compared everything, process ended with great success!")
                 }
-                Err(err) => eprintln!("Error occured: {:?}", err),
             }
-        } else {
-            match do_diff(&config) {
-                Ok(_) => {
-                    if config.verbose {
-                        println!("Compared everything, process ended with great success!")
-                    }
-                }
-                Err(err) => eprintln!("Error occured: {:?}", err),
-            }
+            Err(err) => eprintln!("Error occured: {:?}", err),
         }
     } else if config.help {
         println!(
@@ -42,9 +29,9 @@ fn main() {
 
 #[cfg(test)]
 mod end_to_end {
-    extern crate assert_cli;
-    extern crate regex;
-    extern crate tempdir;
+    use assert_cli;
+    use regex;
+    use tempdir;
 
     use std::fs::File;
     use std::fs;
