@@ -1,9 +1,8 @@
 #[macro_use]
 extern crate criterion;
 
-
 use criterion::Criterion;
-use img_diff::{Config, do_diff};
+use img_diff::{do_diff, Config};
 use std::path::PathBuf;
 
 fn bmp(c: &mut Criterion) {
@@ -14,7 +13,9 @@ fn bmp(c: &mut Criterion) {
         help: false,
         verbose: false,
     };
-    c.bench_function("bmp", |b| { b.iter(|| do_diff(&config)); });
+    c.bench_function("bmp", |b| {
+        b.iter(|| do_diff(&config));
+    });
 }
 
 criterion_group!(benches, bmp);

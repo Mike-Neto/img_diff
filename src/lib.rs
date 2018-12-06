@@ -3,17 +3,17 @@
 //! `img_diff` is a cmd line tool to diff images in 2 folders
 //! you can pass -h to see the help
 //!
-use dssim;
-use rgb;
-use lodepng;
 use bmp;
-use std::path::{Path, PathBuf};
+use dssim;
+use dssim::*;
 use getopts::Options;
+use imgref::*;
+use lodepng;
+use rayon::prelude::*;
+use rgb;
 use std::fs;
 use std::io;
-use dssim::*;
-use rayon::prelude::*;
-use imgref::*;
+use std::path::{Path, PathBuf};
 use std::sync::mpsc;
 use std::thread;
 
@@ -93,36 +93,40 @@ pub fn do_diff(config: &Config) -> io::Result<()> {
 
     // open a channel to load pairs of images from disk
     let (transmitter, receiver) = mpsc::channel();
-    thread::spawn(move || for (scr_path, dest_path) in files_to_load {
-        let extension = scr_path
-            .extension()
-            .unwrap()
-            .to_str()
-            .unwrap()
-            .to_lowercase();
-        if extension == "bmp" {
-            let src_img = Image {
-                path: scr_path.clone(),
-                image: ImageType::BMP(bmp::open(scr_path)),
-            };
-            let dest_img = Image {
-                path: dest_path.clone(),
-                image: ImageType::BMP(bmp::open(dest_path)),
-            };
+    thread::spawn(move || {
+        for (scr_path, dest_path) in files_to_load {
+            let extension = scr_path
+                .extension()
+                .unwrap()
+                .to_str()
+                .unwrap()
+                .to_lowercase();
+            if extension == "bmp" {
+                let src_img = Image {
+                    path: scr_path.clone(),
+                    image: ImageType::BMP(bmp::open(scr_path)),
+                };
+                let dest_img = Image {
+                    path: dest_path.clone(),
+                    image: ImageType::BMP(bmp::open(dest_path)),
+                };
 
-            transmitter.send((src_img, dest_img)).unwrap();
-        } else {
-            let attr = dssim::Dssim::new();
-            let src_img = Image {
-                path: scr_path.clone(),
-                image: ImageType::PNG(Ok(attr.create_image(&load(scr_path).unwrap()).unwrap())),
-            };
-            let dest_img = Image {
-                path: dest_path.clone(),
-                image: ImageType::PNG(Ok(attr.create_image(&load(dest_path).unwrap()).unwrap())),
-            };
+                transmitter.send((src_img, dest_img)).unwrap();
+            } else {
+                let attr = dssim::Dssim::new();
+                let src_img = Image {
+                    path: scr_path.clone(),
+                    image: ImageType::PNG(Ok(attr.create_image(&load(scr_path).unwrap()).unwrap())),
+                };
+                let dest_img = Image {
+                    path: dest_path.clone(),
+                    image: ImageType::PNG(Ok(attr
+                        .create_image(&load(dest_path).unwrap())
+                        .unwrap())),
+                };
 
-            transmitter.send((src_img, dest_img)).unwrap();
+                transmitter.send((src_img, dest_img)).unwrap();
+            }
         }
     });
 
@@ -207,11 +211,10 @@ fn find_all_files_to_load(dir: PathBuf, config: &Config) -> io::Result<Vec<(Path
         let entry = entry.unwrap().path();
         if entry.is_file() {
             //TODO(MiguelMendes): Clone fest @clean-up
-            let dest_file_name =
-                entry.to_str().unwrap().replace(
-                    config.src_dir.clone().unwrap().to_str().unwrap(),
-                    config.dest_dir.clone().unwrap().to_str().unwrap(),
-                );
+            let dest_file_name = entry.to_str().unwrap().replace(
+                config.src_dir.clone().unwrap().to_str().unwrap(),
+                config.dest_dir.clone().unwrap().to_str().unwrap(),
+            );
             let dest_path = PathBuf::from(dest_file_name);
             if dest_path.exists() {
                 files.push((entry, dest_path));
@@ -234,7 +237,6 @@ fn get_diff_file_name_and_validate_path(dest_file_name: String, config: &Config)
         config.diff_dir.clone().unwrap().to_str().unwrap(),
     );
     {
-
         let diff_path = Path::new(&diff_file_name);
         let diff_path_dir = diff_path.parent().unwrap();
         if !diff_path_dir.exists() {
@@ -264,8 +266,7 @@ fn print_diff_result<T: std::fmt::Debug>(verbose: bool, entry: &PathBuf, diff_va
     if verbose {
         println!(
             "compared file: {:?} had diff value of: {:?}",
-            entry,
-            diff_value
+            entry, diff_value
         );
     } else {
         println!("{:?}", diff_value);
