@@ -41,7 +41,6 @@ impl Config {
         opts.optopt("f", "diffDir", "set diff dir name", "");
         opts.optflag("v", "verbose", "toogle verbose mode");
         opts.optflag("h", "help", "print this help menu");
-        opts.optflag("t", "sync", "toggle sync algorithm");
 
         let matches = match opts.parse(&args[1..]) {
             Ok(m) => m,

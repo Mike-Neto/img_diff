@@ -62,7 +62,7 @@ We can use this to enable CI with
 
 ## Download
 
-You need [Rust](https://www.rust-lang.org/en-US/install.html)
+You need [Rust](https://www.rust-lang.org)
 
     cargo install img_diff
 
