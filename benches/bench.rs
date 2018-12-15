@@ -7,10 +7,9 @@ use std::path::PathBuf;
 
 fn bmp(c: &mut Criterion) {
     let config: Config = Config {
-        src_dir: Some(PathBuf::from("tests/bench_bmp/bench_bmp_src")),
-        dest_dir: Some(PathBuf::from("tests/bench_bmp/bench_bmp_dest")),
-        diff_dir: Some(PathBuf::from("tests/bench_bmp/bench_bmp_diff")),
-        help: false,
+        src_dir: PathBuf::from("tests/bench_bmp/bench_bmp_src"),
+        dest_dir:PathBuf::from("tests/bench_bmp/bench_bmp_dest"),
+        diff_dir: PathBuf::from("tests/bench_bmp/bench_bmp_diff"),
         verbose: false,
     };
     c.bench_function("bmp", move |b| {

@@ -6,7 +6,6 @@
 use bmp;
 use dssim;
 use dssim::*;
-use getopts::Options;
 use imgref::*;
 use lodepng;
 use rayon::prelude::*;
@@ -16,63 +15,24 @@ use std::io;
 use std::path::{Path, PathBuf};
 use std::sync::mpsc;
 use std::thread;
+use structopt::StructOpt;
 
-/// Config includes all the variables in this application
-#[derive(Debug)]
+#[derive(Debug, StructOpt)]
+#[structopt(raw(setting = "structopt::clap::AppSettings::ColoredHelp"))]
+/// diff images in 2 structurally similar folders and output diff images
 pub struct Config {
     /// the folder to read
-    pub src_dir: Option<PathBuf>,
+    #[structopt(parse(from_os_str), short = "s")]
+    pub src_dir: PathBuf,
     /// the folder to compare the read images
-    pub dest_dir: Option<PathBuf>,
+    #[structopt(parse(from_os_str), short = "d")]
+    pub dest_dir: PathBuf,
     /// the folder to output the diff images if a diff is found
-    pub diff_dir: Option<PathBuf>,
+    #[structopt(parse(from_os_str), short = "f")]
+    pub diff_dir: PathBuf,
     /// toggle verbose mode
+    #[structopt(short = "v", long = "verbose")]
     pub verbose: bool,
-    /// toggle help mode
-    pub help: bool,
-}
-
-impl Config {
-    /// Config constructor, takes the env args as string vec
-    pub fn new(args: &[String]) -> Config {
-        let mut opts = Options::new();
-        opts.optopt("s", "srcDir", "set source dir name", "");
-        opts.optopt("d", "destDir", "set output dir name", "");
-        opts.optopt("f", "diffDir", "set diff dir name", "");
-        opts.optflag("v", "verbose", "toggle verbose mode");
-        opts.optflag("h", "help", "print this help menu");
-
-        let matches = match opts.parse(&args[1..]) {
-            Ok(m) => m,
-            Err(f) => panic!(f.to_string()),
-        };
-
-        let verbose = matches.opt_present("v");
-        let help = matches.opt_present("h");
-
-        let src_dir: Option<PathBuf> = match matches.opt_str("s") {
-            Some(string) => Some(PathBuf::from(string)),
-            None => None,
-        };
-
-        let dest_dir: Option<PathBuf> = match matches.opt_str("d") {
-            Some(string) => Some(PathBuf::from(string)),
-            None => None,
-        };
-
-        let diff_dir: Option<PathBuf> = match matches.opt_str("f") {
-            Some(string) => Some(PathBuf::from(string)),
-            None => None,
-        };
-
-        Config {
-            src_dir,
-            dest_dir,
-            diff_dir,
-            verbose,
-            help,
-        }
-    }
 }
 
 enum ImageType {
@@ -88,7 +48,7 @@ struct Image {
 /// Diffs all images using a channel to parallelize the file IO and processing.
 pub fn do_diff(config: &Config) -> io::Result<()> {
     // Get a full list of all images to load (scr and dest pairs)
-    let files_to_load = find_all_files_to_load(config.src_dir.clone().unwrap(), &config)?;
+    let files_to_load = find_all_files_to_load(config.src_dir.clone(), &config)?;
 
     // open a channel to load pairs of images from disk
     let (transmitter, receiver) = mpsc::channel();
@@ -230,8 +190,8 @@ fn find_all_files_to_load(dir: PathBuf, config: &Config) -> io::Result<Vec<(Path
         if entry.is_file() {
             //TODO(MiguelMendes): Clone fest @clean-up
             let dest_file_name = entry.to_str().unwrap().replace(
-                config.src_dir.clone().unwrap().to_str().unwrap(),
-                config.dest_dir.clone().unwrap().to_str().unwrap(),
+                config.src_dir.clone().to_str().unwrap(),
+                config.dest_dir.clone().to_str().unwrap(),
             );
             let dest_path = PathBuf::from(dest_file_name);
             if dest_path.exists() {
@@ -251,8 +211,8 @@ fn find_all_files_to_load(dir: PathBuf, config: &Config) -> io::Result<Vec<(Path
 /// helper to create necessary folders for IO operations to be successful
 fn get_diff_file_name_and_validate_path(dest_file_name: &str, config: &Config) -> String {
     let diff_file_name = dest_file_name.replace(
-        config.dest_dir.clone().unwrap().to_str().unwrap(),
-        config.diff_dir.clone().unwrap().to_str().unwrap(),
+        config.dest_dir.clone().to_str().unwrap(),
+        config.diff_dir.clone().to_str().unwrap(),
     );
     {
         let diff_path = Path::new(&diff_file_name);

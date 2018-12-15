@@ -1,29 +1,20 @@
 use img_diff::{do_diff, Config};
-use std::env;
+use structopt::StructOpt;
 
 fn main() {
-    let args: Vec<String> = env::args().collect();
-    let config = Config::new(&args);
+    let config = Config::from_args();
 
     if config.verbose {
         println!("Parsed configs: {:?}", config);
     }
 
-    if config.src_dir.is_some() && config.dest_dir.is_some() && config.diff_dir.is_some() {
-        match do_diff(&config) {
-            Ok(_) => {
-                if config.verbose {
-                    println!("Compared everything, process ended with great success!")
-                }
+    match do_diff(&config) {
+        Ok(_) => {
+            if config.verbose {
+                println!("Compared everything, process ended with great success!")
             }
-            Err(err) => eprintln!("Error occurred: {:?}", err),
         }
-    } else if config.help {
-        println!(
-            "-s to indicate source directory\n-d to indicate destination directory\n-f to indicate diff directory\n-v to toggle verbose mode"
-        );
-    } else {
-        println!("Missing cmd line arguments use img_diff -h to see help");
+        Err(err) => eprintln!("Error occurred: {:?}", err),
     }
 }
 
@@ -68,8 +59,11 @@ mod end_to_end {
     fn it_prints_usage_text_when_no_args_are_provided() {
         assert_cli::Assert::main_binary()
             .stdout()
-            .is("Missing cmd line arguments use img_diff -h to see help")
-            .succeeds()
+            .is("")
+            .and()
+            .stderr()
+            .isnt("")
+            .fails()
             .unwrap();
     }
 
@@ -78,37 +72,34 @@ mod end_to_end {
         assert_cli::Assert::main_binary()
             .with_args(&["-h"])
             .stdout()
-            .contains("-s to indicate source directory\n-d to indicate destination directory\n-f to indicate diff directory\n-v to toggle verbose mode")
+            .isnt("")
+            .succeeds()
+            .unwrap();
+
+        assert_cli::Assert::main_binary()
+            .with_args(&["--help"])
+            .stdout()
+            .isnt("")
             .succeeds()
             .unwrap();
     }
 
     #[test]
-    fn parses_src_dir_param() {
+    fn it_fails_when_path_is_provided_but_are_not_there() {
         assert_cli::Assert::main_binary()
-            .with_args(&["-v", "-s", "source_dir_param"])
+            .with_args(&[
+                "-s",
+                "fake_test/it_works_for_equal_images/it_works_for_equal_images_src",
+                "-d",
+                "fake_test/it_works_for_equal_images/it_works_for_equal_images_dest",
+                "-f",
+                "fake_test/it_works_for_equal_images/it_works_for_equal_images_diff",
+            ])
             .stdout()
-            .contains("source_dir_param")
-            .succeeds()
-            .unwrap();
-    }
-
-    #[test]
-    fn parses_dest_dir_param() {
-        assert_cli::Assert::main_binary()
-            .with_args(&["-v", "-d", "source_dest_param"])
-            .stdout()
-            .contains("source_dest_param")
-            .succeeds()
-            .unwrap();
-    }
-
-    #[test]
-    fn parses_diff_dir_param() {
-        assert_cli::Assert::main_binary()
-            .with_args(&["-v", "-f", "source_diff_param"])
-            .stdout()
-            .contains("source_diff_param")
+            .is("")
+            .and()
+            .stderr()
+            .isnt("")
             .succeeds()
             .unwrap();
     }
@@ -309,16 +300,6 @@ mod end_to_end {
             .and()
             .stderr()
             .contains("MARBLES_01.BMP")
-            .succeeds()
-            .unwrap();
-    }
-
-    #[test]
-    fn it_enables_verbose_mode_when_verbose_arg_is_provided() {
-        assert_cli::Assert::main_binary()
-            .with_args(&["-v"])
-            .stdout()
-            .contains("verbose: true")
             .succeeds()
             .unwrap();
     }
