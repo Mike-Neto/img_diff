@@ -16,7 +16,7 @@ fn main() {
                     println!("Compared everything, process ended with great success!")
                 }
             }
-            Err(err) => eprintln!("Error occured: {:?}", err),
+            Err(err) => eprintln!("Error occurred: {:?}", err),
         }
     } else if config.help {
         println!(
@@ -278,6 +278,34 @@ mod end_to_end {
             .and()
             .stdout()
             .satisfies(move |x| regex_equal.is_match(x), "different equal ")
+            .succeeds()
+            .unwrap();
+    }
+
+    #[test]
+    fn it_works_when_images_have_different_dimensions() {
+        let temp = TempDir::new("it_works_when_images_have_different_dimensions").unwrap();
+        let path = temp
+            .path()
+            .join("it_works_when_images_have_different_dimensions_diff");
+
+        assert_cli::Assert::main_binary()
+            .with_args(
+                &[
+                    "-v",
+                    "-s",
+                    "tests/it_works_when_images_have_different_dimensions/it_works_when_images_have_different_dimensions_src",
+                    "-d",
+                    "tests/it_works_when_images_have_different_dimensions/it_works_when_images_have_different_dimensions_dest",
+                    "-f",
+                    path.to_str().unwrap(),
+                ],
+            )
+            .stdout()
+            .contains("Images have different dimensions, skipping comparison")
+            .and()
+            .stderr()
+            .is("diff found in file: \"tests/it_works_when_images_have_different_dimensions/it_works_when_images_have_different_dimensions_src/rustacean-error.png\"\ndiff found in file: \"tests/it_works_when_images_have_different_dimensions/it_works_when_images_have_different_dimensions_src/MARBLES_01.BMP\"")
             .succeeds()
             .unwrap();
     }

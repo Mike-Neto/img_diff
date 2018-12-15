@@ -26,20 +26,20 @@ pub struct Config {
     pub dest_dir: Option<PathBuf>,
     /// the folder to output the diff images if a diff is found
     pub diff_dir: Option<PathBuf>,
-    /// toogle verbose mode
+    /// toggle verbose mode
     pub verbose: bool,
-    /// toogle help mode
+    /// toggle help mode
     pub help: bool,
 }
 
 impl Config {
-    /// Config contructor, takes the env args as string vec
+    /// Config constructor, takes the env args as string vec
     pub fn new(args: &[String]) -> Config {
         let mut opts = Options::new();
         opts.optopt("s", "srcDir", "set source dir name", "");
         opts.optopt("d", "destDir", "set output dir name", "");
         opts.optopt("f", "diffDir", "set diff dir name", "");
-        opts.optflag("v", "verbose", "toogle verbose mode");
+        opts.optflag("v", "verbose", "toggle verbose mode");
         opts.optflag("h", "help", "print this help menu");
 
         let matches = match opts.parse(&args[1..]) {
@@ -77,7 +77,7 @@ impl Config {
 
 enum ImageType {
     BMP(Result<bmp::Image, bmp::BmpError>),
-    PNG(Result<dssim::DssimImage<f32>, std::io::Error>),
+    PNG(Result<ImgVec<RGBAPLU>, lodepng::ffi::Error>),
 }
 
 struct Image {
@@ -85,7 +85,7 @@ struct Image {
     image: ImageType,
 }
 
-/// Diffs all images using a channel to pararelize the file IO and processing.
+/// Diffs all images using a channel to parallelize the file IO and processing.
 pub fn do_diff(config: &Config) -> io::Result<()> {
     // Get a full list of all images to load (scr and dest pairs)
     let files_to_load = find_all_files_to_load(config.src_dir.clone().unwrap(), &config)?;
@@ -112,16 +112,13 @@ pub fn do_diff(config: &Config) -> io::Result<()> {
 
                 transmitter.send((src_img, dest_img)).unwrap();
             } else {
-                let attr = dssim::Dssim::new();
                 let src_img = Image {
                     path: scr_path.clone(),
-                    image: ImageType::PNG(Ok(attr.create_image(&load(scr_path).unwrap()).unwrap())),
+                    image: ImageType::PNG(load(scr_path)),
                 };
                 let dest_img = Image {
                     path: dest_path.clone(),
-                    image: ImageType::PNG(Ok(attr
-                        .create_image(&load(dest_path).unwrap())
-                        .unwrap())),
+                    image: ImageType::PNG(load(dest_path)),
                 };
 
                 transmitter.send((src_img, dest_img)).unwrap();
@@ -129,7 +126,7 @@ pub fn do_diff(config: &Config) -> io::Result<()> {
         }
     });
 
-    // do the comparison in the recivieng channel
+    // do the comparison in the receiving channel
     for (src_img, dest_img) in receiver {
         match src_img.image {
             ImageType::BMP(src_image) => {
@@ -141,36 +138,41 @@ pub fn do_diff(config: &Config) -> io::Result<()> {
                     let src_bmp_img = src_image.unwrap();
                     let dest_bmp_img = dest_image.unwrap();
                     let mut diff_value = 0.0; //TODO(MiguelMendes): Give a meaning to this value
-                    let mut diff_image =
-                        bmp::Image::new(src_bmp_img.get_width(), src_bmp_img.get_height());
-                    for (x, y) in src_bmp_img.coordinates() {
-                        let dest_pixel = dest_bmp_img.get_pixel(x, y);
-                        let src_pixel = src_bmp_img.get_pixel(x, y);
-                        let diff_pixel = subtract(src_pixel, dest_pixel);
-                        diff_value += interpolate(diff_pixel);
-                        diff_image.set_pixel(x, y, diff_pixel);
-                    }
-                    print_diff_result(config.verbose, &src_img.path, diff_value);
-                    let diff_file_name = get_diff_file_name_and_validate_path(
-                        dest_img.path.to_str().unwrap(),
-                        config,
-                    );
-                    if diff_value != 0.0 {
-                        if config.verbose {
-                            eprintln!(
-                                "diff found in file: {:?}",
-                                String::from(src_img.path.to_str().unwrap())
-                            );
+                    if src_bmp_img.get_width() != dest_bmp_img.get_width()
+                        || src_bmp_img.get_height() != dest_bmp_img.get_height()
+                    {
+                        diff_value = 1.0; // Any value to flag it to output
+                        println!("Images have different dimensions, skipping comparison");
+                    } else {
+                        let mut diff_image =
+                            bmp::Image::new(src_bmp_img.get_width(), src_bmp_img.get_height());
+                        for (x, y) in src_bmp_img.coordinates() {
+                            let dest_pixel = dest_bmp_img.get_pixel(x, y);
+                            let src_pixel = src_bmp_img.get_pixel(x, y);
+                            let diff_pixel = subtract(src_pixel, dest_pixel);
+                            diff_value += interpolate(diff_pixel);
+                            diff_image.set_pixel(x, y, diff_pixel);
                         }
+                        let diff_file_name = get_diff_file_name_and_validate_path(
+                            dest_img.path.to_str().unwrap(),
+                            config,
+                        );
                         // Use another tread to write the files as necessary
                         let handle =
                             thread::spawn(move || output_bmp(&diff_file_name, Some(diff_image)));
                         handle.join().unwrap();
                     }
-                } else {
-                    println!("kek");
+                    print_diff_result(config.verbose, &src_img.path, diff_value);
+
+                    if diff_value != 0.0 && config.verbose {
+                        eprintln!(
+                            "diff found in file: {:?}",
+                            String::from(src_img.path.to_str().unwrap())
+                        );
+                    }
                 }
             }
+            // TODO(MiguelMendes): @Cleanup duplicated verbose messages
             ImageType::PNG(src_image) => {
                 let dest_image = match dest_img.image {
                     ImageType::PNG(dest_image) => dest_image,
@@ -179,21 +181,37 @@ pub fn do_diff(config: &Config) -> io::Result<()> {
                 if src_image.is_ok() && dest_image.is_ok() {
                     let src_png_img = src_image.unwrap();
                     let dest_png_img = dest_image.unwrap();
-                    let mut attr = dssim::Dssim::new();
-                    attr.set_save_ssim_maps(1);
-                    let (ssim_diff_value, ssim_maps) = attr.compare(&src_png_img, dest_png_img);
-                    print_diff_result(config.verbose, &src_img.path, ssim_diff_value);
-                    if ssim_diff_value != 0.0 {
-                        let diff_file_name = get_diff_file_name_and_validate_path(
-                            dest_img.path.to_str().unwrap(),
-                            config,
-                        );
-                        output_diff_files(&diff_file_name, &ssim_maps);
+
+                    if src_png_img.width() != dest_png_img.width()
+                        || src_png_img.height() != dest_png_img.height()
+                    {
+                        println!("Images have different dimensions, skipping comparison");
                         if config.verbose {
                             eprintln!(
                                 "diff found in file: {:?}",
                                 String::from(src_img.path.to_str().unwrap())
                             );
+                        }
+                    } else {
+                        let mut attr = dssim::Dssim::new();
+                        attr.set_save_ssim_maps(1);
+                        let (ssim_diff_value, ssim_maps) = attr.compare(
+                            &attr.create_image(&src_png_img).unwrap(),
+                            attr.create_image(&dest_png_img).unwrap(),
+                        );
+                        print_diff_result(config.verbose, &src_img.path, ssim_diff_value);
+                        if ssim_diff_value != 0.0 {
+                            let diff_file_name = get_diff_file_name_and_validate_path(
+                                dest_img.path.to_str().unwrap(),
+                                config,
+                            );
+                            output_diff_files(&diff_file_name, &ssim_maps);
+                            if config.verbose {
+                                eprintln!(
+                                    "diff found in file: {:?}",
+                                    String::from(src_img.path.to_str().unwrap())
+                                );
+                            }
                         }
                     }
                 }
@@ -206,6 +224,7 @@ pub fn do_diff(config: &Config) -> io::Result<()> {
 
 fn find_all_files_to_load(dir: PathBuf, config: &Config) -> io::Result<Vec<(PathBuf, PathBuf)>> {
     let mut files: Vec<(PathBuf, PathBuf)> = vec![];
+    // TODO(MiguelMendes): Better error msg for when folders are missing
     for entry in fs::read_dir(dir)? {
         let entry = entry.unwrap().path();
         if entry.is_file() {
