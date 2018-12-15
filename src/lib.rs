@@ -184,24 +184,32 @@ pub fn do_diff(config: &Config) -> io::Result<()> {
 
 fn find_all_files_to_load(dir: PathBuf, config: &Config) -> io::Result<Vec<(PathBuf, PathBuf)>> {
     let mut files: Vec<(PathBuf, PathBuf)> = vec![];
-    // TODO(MiguelMendes): Better error msg for when folders are missing
-    for entry in fs::read_dir(dir)? {
-        let entry = entry.unwrap().path();
-        if entry.is_file() {
-            //TODO(MiguelMendes): Clone fest @clean-up
-            let dest_file_name = entry.to_str().unwrap().replace(
-                config.src_dir.clone().to_str().unwrap(),
-                config.dest_dir.clone().to_str().unwrap(),
-            );
-            let dest_path = PathBuf::from(dest_file_name);
-            if dest_path.exists() {
-                files.push((entry, dest_path));
-            }
-        } else {
-            let child_files = find_all_files_to_load(entry, &config)?;
-            //TODO(MiguelMendes): 1 liner for this? // join vec?
-            for child in child_files {
-                files.push(child);
+    match fs::read_dir(dir) {
+        Err(err) => eprintln!("Could not read dir: {:?}", err),
+        Ok(entries) => {
+            for entry in entries {
+                match entry {
+                    Err(err) => eprintln!("Error in dir entry: {:?}", err),
+                    Ok(entry) => {
+                        let entry = entry.path();
+                        if entry.is_file() {
+                            let dest_file_name = entry.to_str().unwrap().replace(
+                                config.src_dir.clone().to_str().unwrap(),
+                                config.dest_dir.clone().to_str().unwrap(),
+                            );
+                            let dest_path = PathBuf::from(dest_file_name);
+                            if dest_path.exists() {
+                                files.push((entry, dest_path));
+                            }
+                        } else {
+                            let child_files = find_all_files_to_load(entry, &config)?;
+                            //TODO(MiguelMendes): 1 liner for this? // join vec?
+                            for child in child_files {
+                                files.push(child);
+                            }
+                        }
+                    }
+                }
             }
         }
     }
