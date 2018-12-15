@@ -26,7 +26,7 @@ The value returned for bmp images 0 if images are equal and a positive number th
 
     img_diff -s path\to\images -d path\to\images\to\compare -f path\to\output\diff\images
 
-Will go trough all the files in the -s dir and subdir's and compare them to the ones in the -d outputting diff files if a difference is found to -f dir.
+Will go trough all the files in the -s dir and subdirectories and compare them to the ones in the -d outputting diff files if a difference is found to -f dir.
 
 	-v
 

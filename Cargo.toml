@@ -1,6 +1,6 @@
 [package]
 name = "img_diff"
-version = "3.0.0"
+version = "3.0.1"
 authors = ["Miguel Mendes <miguelmendeseiriz@gmail.com>"]
 edition = '2018'
 description = "Command line tool to diff images in 2 structurally similar folders and output diff images."
