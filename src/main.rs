@@ -305,10 +305,10 @@ mod end_to_end {
             .contains("Images have different dimensions, skipping comparison")
             .and()
             .stderr()
-            .contains("diff found in file: \"tests/it_works_when_images_have_different_dimensions/it_works_when_images_have_different_dimensions_src/rustacean-error.png\"")
+            .contains("rustacean-error.png")
             .and()
             .stderr()
-            .contains("diff found in file: \"tests/it_works_when_images_have_different_dimensions/it_works_when_images_have_different_dimensions_src/MARBLES_01.BMP\"")
+            .contains("MARBLES_01.BMP")
             .succeeds()
             .unwrap();
     }
