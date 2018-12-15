@@ -13,7 +13,7 @@ fn bmp(c: &mut Criterion) {
         help: false,
         verbose: false,
     };
-    c.bench_function("bmp", |b| {
+    c.bench_function("bmp", move |b| {
         b.iter(|| do_diff(&config));
     });
 }
