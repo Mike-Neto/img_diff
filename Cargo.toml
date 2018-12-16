@@ -23,10 +23,11 @@ bmp = "0.4.0"
 structopt = "0.2.14"
 
 [dev-dependencies]
-assert_cli = "0.6.3"
 criterion = "0.2.5"
 regex = "1.1.0"
 tempdir = "0.3.7"
+assert_cmd = "0.10.2"
+predicates = "1.0.0"
 
 [[bench]]
 name = "bench"
