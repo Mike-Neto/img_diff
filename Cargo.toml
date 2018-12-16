@@ -21,6 +21,7 @@ rgb = "0.8.11"
 rayon = "1.0.3"
 bmp = "0.4.0"
 structopt = "0.2.14"
+human-panic = "1.0.1"
 
 [dev-dependencies]
 criterion = "0.2.5"
