@@ -147,16 +147,16 @@ mod end_to_end {
     }
 
     #[test]
-    fn it_works_for_diffrent_images() {
-        let diff = TempDir::new("it_works_for_diffrent_images_diff").unwrap();
+    fn it_works_for_different_images() {
+        let diff = TempDir::new("it_works_for_different_images").unwrap();
         let regex = regex::Regex::new("Dssim[(]4.4469[0-9]{10,11}[)]\n").unwrap();
 
         assert_cli::Assert::main_binary()
             .with_args(&[
                 "-s",
-                "tests/it_works_for_diffrent_images/it_works_for_diffrent_images_scr",
+                "tests/it_works_for_different_images/it_works_for_different_images_scr",
                 "-d",
-                "tests/it_works_for_diffrent_images/it_works_for_diffrent_images_dest",
+                "tests/it_works_for_different_images/it_works_for_different_images_dest",
                 "-f",
                 diff.path().to_str().unwrap(),
             ])
@@ -167,18 +167,18 @@ mod end_to_end {
     }
 
     #[test]
-    fn it_works_for_diffrent_images_and_produces_diff_file() {
+    fn it_works_for_different_images_and_produces_diff_file() {
         let diff =
-            TempDir::new("it_works_for_diffrent_images_and_produces_diff_file_diff").unwrap();
+            TempDir::new("it_works_for_different_images_and_produces_diff_file_diff").unwrap();
         let regex = regex::Regex::new("Dssim[(]4.4469[0-9]{10,11}[)]\n").unwrap();
 
         assert_cli::Assert::main_binary()
             .with_args(
                 &[
                     "-s",
-                    "tests/it_works_for_diffrent_images_and_produces_diff_file/it_works_for_diffrent_images_and_produces_diff_file_scr",
+                    "tests/it_works_for_different_images_and_produces_diff_file/it_works_for_different_images_and_produces_diff_file_scr",
                     "-d",
-                    "tests/it_works_for_diffrent_images_and_produces_diff_file/it_works_for_diffrent_images_and_produces_diff_file_dest",
+                    "tests/it_works_for_different_images_and_produces_diff_file/it_works_for_different_images_and_produces_diff_file_dest",
                     "-f",
                     diff.path().to_str().unwrap(),
                 ],
@@ -325,14 +325,14 @@ mod end_to_end {
 
     #[test]
     fn when_in_verbose_mode_prints_each_file_diff_to_stderr() {
-        let diff = TempDir::new("it_works_for_diffrent_images_diff").unwrap();
+        let diff = TempDir::new("it_works_for_different_images_diff").unwrap();
         assert_cli::Assert::main_binary()
             .with_args(&[
                 "-v",
                 "-s",
-                "tests/it_works_for_diffrent_images/it_works_for_diffrent_images_scr",
+                "tests/it_works_for_different_images/it_works_for_different_images_scr",
                 "-d",
-                "tests/it_works_for_diffrent_images/it_works_for_diffrent_images_dest",
+                "tests/it_works_for_different_images/it_works_for_different_images_dest",
                 "-f",
                 diff.path().to_str().unwrap(),
             ])
