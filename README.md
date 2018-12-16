@@ -74,6 +74,21 @@ You can also download a binary release for your platform on [github releases](ht
 
 ## Changelog
 
+### From 3.0.1
+Fixed some issues and migrated to using tools as recommended by the CLI WG
+* Migrated to StructOpt
+
+Removed all unwraps and provide error messages.
+Updated dependencies.
+More typo fixes.
+Updated future features with things from the CLI WG suggestions.
+
+### From 3.0.0
+Formatted using cargo fmt.
+Fixed clippy issues.
+Fixed typos and updated docs.
+Updated dependencies.
+
 ### From 2.1.0
 Removed Multi-threaded flag making that the default.
 
