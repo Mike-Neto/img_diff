@@ -27,6 +27,7 @@ The value returned for bmp images 0 if images are equal and a positive number th
 * Add logging (log crate)
 * Add Progress bar (indicatif crate)
 * Add types of output (convey crate)
+* Generate a man page (clap crate)
 
 ## Usage
 
