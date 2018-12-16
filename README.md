@@ -77,6 +77,7 @@ You can also download a binary release for your platform on [github releases](ht
 ### From 3.0.1
 Fixed some issues and migrated to using tools as recommended by the CLI WG
 * Migrated to StructOpt
+* Migrated to assert_cmd
 
 Removed all unwraps and provide error messages.
 Updated dependencies.
