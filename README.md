@@ -22,9 +22,11 @@ The value returned for bmp images 0 if images are equal and a positive number th
 * Allow for a threshold to output diff file.
 * Provide a single unit of difference.
 
-* Revise stdout & stderr efficiency.
+### From the CLI WG
+* Revise stdout & stderr efficiency (avoid flush by using a stream).
 * Add logging (log crate)
 * Add Progress bar (indicatif crate)
+* Add types of output (convey crate)
 
 ## Usage
 
