@@ -22,6 +22,10 @@ The value returned for bmp images 0 if images are equal and a positive number th
 * Allow for a threshold to output diff file.
 * Provide a single unit of difference.
 
+* Revise stdout & stderr efficiency.
+* Add logging (log crate)
+* Add Progress bar (indicatif crate)
+
 ## Usage
 
     img_diff -s path\to\images -d path\to\images\to\compare -f path\to\output\diff\images
