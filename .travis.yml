@@ -40,9 +40,9 @@ matrix:
     - env: TARGET=x86_64-apple-darwin
       os: osx
       rust: nightly
-    - env: x86_64-unknown-freebsd
+    - env: TARGET=x86_64-unknown-freebsd
       rust: beta
-    - env: x86_64-unknown-freebsd
+    - env: TARGET=x86_64-unknown-freebsd
       rust: nightly
   allow_failures:
     - rust: nightly

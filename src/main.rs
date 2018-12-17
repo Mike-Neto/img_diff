@@ -23,7 +23,6 @@ fn main() {
 #[cfg(test)]
 mod end_to_end {
     use assert_cmd::prelude::*;
-    use regex;
     use tempdir;
 
     use self::tempdir::TempDir;
