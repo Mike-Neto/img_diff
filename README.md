@@ -22,6 +22,13 @@ The value returned for bmp images 0 if images are equal and a positive number th
 * Allow for a threshold to output diff file.
 * Provide a single unit of difference.
 
+### From the CLI WG
+* Revise stdout & stderr efficiency (avoid flush by using a stream).
+* Add logging (log crate)
+* Add Progress bar (indicatif crate)
+* Add types of output (convey crate)
+* Generate a man page (clap crate)
+
 ## Usage
 
     img_diff -s path\to\images -d path\to\images\to\compare -f path\to\output\diff\images
@@ -69,6 +76,29 @@ You need [Rust](https://www.rust-lang.org)
 You can also download a binary release for your platform on [github releases](https://github.com/Mike-Neto/img_diff/releases/latest)
 
 ## Changelog
+
+### From 3.0.1
+Fixed some issues and migrated to using tools as recommended by the CLI WG
+* Migrated to StructOpt
+* Migrated to assert_cmd
+* Added human friendly panic
+
+Removed all unwraps and provide error messages.
+
+Updated dependencies.
+
+More typo fixes.
+
+Updated future features with things from the CLI WG suggestions.
+
+### From 3.0.0
+Formatted using cargo fmt.
+
+Fixed clippy issues.
+
+Fixed typos and updated docs.
+
+Updated dependencies.
 
 ### From 2.1.0
 Removed Multi-threaded flag making that the default.
