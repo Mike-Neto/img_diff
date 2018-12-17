@@ -93,8 +93,11 @@ Updated future features with things from the CLI WG suggestions.
 
 ### From 3.0.0
 Formatted using cargo fmt.
+
 Fixed clippy issues.
+
 Fixed typos and updated docs.
+
 Updated dependencies.
 
 ### From 2.1.0
