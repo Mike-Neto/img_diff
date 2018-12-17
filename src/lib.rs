@@ -3,14 +3,9 @@
 //! `img_diff` is a cmd line tool to diff images in 2 folders
 //! you can pass -h to see the help
 //!
-use bmp;
-use dssim;
-use dssim::*;
-use imgref::*;
-use lodepng;
-use rayon::prelude::*;
-use rgb;
-use std::fs;
+use bmp::{open, BmpError, Image, Pixel};
+use lodepng::{decode32_file, encode32_file, ffi, Bitmap, RGBA};
+use std::fs::{create_dir, read_dir};
 use std::io;
 use std::path::{Path, PathBuf};
 use std::sync::mpsc;
@@ -36,11 +31,11 @@ pub struct Config {
 }
 
 enum ImageType {
-    BMP(Result<bmp::Image, bmp::BmpError>),
-    PNG(Result<ImgVec<RGBAPLU>, lodepng::ffi::Error>),
+    BMP(Result<Image, BmpError>),
+    PNG(Result<Bitmap<RGBA>, ffi::Error>),
 }
 
-struct Image {
+struct DiffImage {
     path: PathBuf,
     image: ImageType,
 }
@@ -58,26 +53,26 @@ pub fn do_diff(config: &Config) -> io::Result<()> {
                 if let Some(extension) = extension.to_str() {
                     let extension = extension.to_lowercase();
                     if extension == "bmp" {
-                        let src_img = Image {
+                        let src_img = DiffImage {
                             path: scr_path.clone(),
-                            image: ImageType::BMP(bmp::open(scr_path)),
+                            image: ImageType::BMP(open(scr_path)),
                         };
-                        let dest_img = Image {
+                        let dest_img = DiffImage {
                             path: dest_path.clone(),
-                            image: ImageType::BMP(bmp::open(dest_path)),
+                            image: ImageType::BMP(open(dest_path)),
                         };
 
                         if let Err(err) = transmitter.send((src_img, dest_img)) {
                             eprintln!("Could not send using channel: {:?}", err);
                         };
                     } else {
-                        let src_img = Image {
+                        let src_img = DiffImage {
                             path: scr_path.clone(),
-                            image: ImageType::PNG(load(scr_path)),
+                            image: ImageType::PNG(decode32_file(scr_path)),
                         };
-                        let dest_img = Image {
+                        let dest_img = DiffImage {
                             path: dest_path.clone(),
-                            image: ImageType::PNG(load(dest_path)),
+                            image: ImageType::PNG(decode32_file(dest_path)),
                         };
 
                         if let Err(err) = transmitter.send((src_img, dest_img)) {
@@ -112,7 +107,7 @@ pub fn do_diff(config: &Config) -> io::Result<()> {
                             println!("Images have different dimensions, skipping comparison");
                         } else {
                             let mut diff_image =
-                                bmp::Image::new(src_bmp_img.get_width(), src_bmp_img.get_height());
+                                Image::new(src_bmp_img.get_width(), src_bmp_img.get_height());
                             for (x, y) in src_bmp_img.coordinates() {
                                 let dest_pixel = dest_bmp_img.get_pixel(x, y);
                                 let src_pixel = src_bmp_img.get_pixel(x, y);
@@ -167,8 +162,8 @@ pub fn do_diff(config: &Config) -> io::Result<()> {
                 };
                 match (src_image, dest_image) {
                     (Ok(src_png_img), Ok(dest_png_img)) => {
-                        if src_png_img.width() != dest_png_img.width()
-                            || src_png_img.height() != dest_png_img.height()
+                        if src_png_img.width != dest_png_img.width
+                            || src_png_img.height != dest_png_img.height
                         {
                             println!("Images have different dimensions, skipping comparison");
                             if config.verbose {
@@ -182,58 +177,57 @@ pub fn do_diff(config: &Config) -> io::Result<()> {
                                 }
                             }
                         } else {
-                            let mut attr = dssim::Dssim::new();
-                            attr.set_save_ssim_maps(1);
-                            match (
-                                attr.create_image(&src_png_img),
-                                attr.create_image(&dest_png_img),
-                            ) {
-                                (Some(src_image), Some(dest_image)) => {
-                                    let (ssim_diff_value, ssim_maps) =
-                                        attr.compare(&src_image, dest_image);
-                                    print_diff_result(
-                                        config.verbose,
-                                        &src_img.path,
-                                        ssim_diff_value,
-                                    );
-                                    if ssim_diff_value != 0.0 {
-                                        if let Some(dest_img_path) = dest_img.path.to_str() {
-                                            let diff_file_name =
-                                                get_diff_file_name_and_validate_path(
-                                                    dest_img_path,
-                                                    config,
-                                                );
-                                            match diff_file_name {
-                                                Some(diff_file_name) => {
-                                                    output_diff_files(&diff_file_name, &ssim_maps);
-                                                    if config.verbose {
-                                                        if let Some(path) = src_img.path.to_str() {
-                                                            eprintln!(
-                                                                "diff found in file: {:?}",
-                                                                String::from(path)
-                                                            );
-                                                        } else {
-                                                            eprintln!(
-                                                    "failed to convert path to string: {:?}",
-                                                    src_img.path
-                                                );
-                                                        }
-                                                    }
-                                                }
-                                                None => {
-                                                    eprintln!("Could not output diff file");
+                            let mut diff_value = 0.0; //TODO(MiguelMendes): Give a meaning to this value
+                            let pixels = src_png_img.width * src_png_img.height;
+                            let mut diff_img: Vec<RGBA> =
+                                Vec::with_capacity(pixels * std::mem::size_of::<RGBA>());
+                            for i in 0..pixels {
+                                let src_pixel = src_png_img.buffer[i];
+                                let dest_pixel = dest_png_img.buffer[i];
+
+                                let diff_pixel = subtract_png(src_pixel, dest_pixel);
+                                diff_value += interpolate_png(diff_pixel);
+                                diff_img.push(diff_pixel);
+                            }
+                            print_diff_result(config.verbose, &src_img.path, diff_value);
+                            if diff_value != 0.0 {
+                                if let Some(dest_img_path) = dest_img.path.to_str() {
+                                    let diff_file_name =
+                                        get_diff_file_name_and_validate_path(dest_img_path, config);
+                                    match diff_file_name {
+                                        Some(diff_file_name) => {
+                                            if let Err(err) = encode32_file(
+                                                diff_file_name,
+                                                &diff_img,
+                                                src_png_img.width,
+                                                src_png_img.height,
+                                            ) {
+                                                eprintln!("Failed to write file: {:?}", err);
+                                            }
+                                            if config.verbose {
+                                                if let Some(path) = src_img.path.to_str() {
+                                                    eprintln!(
+                                                        "diff found in file: {:?}",
+                                                        String::from(path)
+                                                    );
+                                                } else {
+                                                    eprintln!(
+                                                        "failed to convert path to string: {:?}",
+                                                        src_img.path
+                                                    );
                                                 }
                                             }
-                                        } else {
-                                            eprintln!(
-                                                "failed to convert path to string: {:?}",
-                                                dest_img.path
-                                            );
+                                        }
+                                        None => {
+                                            eprintln!("Could not output diff file");
                                         }
                                     }
+                                } else {
+                                    eprintln!(
+                                        "failed to convert path to string: {:?}",
+                                        dest_img.path
+                                    );
                                 }
-                                (None, _) => eprintln!("Failed to load src img"),
-                                (_, None) => eprintln!("Failed to load dest img"),
                             }
                         }
                     }
@@ -249,7 +243,7 @@ pub fn do_diff(config: &Config) -> io::Result<()> {
 
 fn find_all_files_to_load(dir: PathBuf, config: &Config) -> io::Result<Vec<(PathBuf, PathBuf)>> {
     let mut files: Vec<(PathBuf, PathBuf)> = vec![];
-    match fs::read_dir(dir) {
+    match read_dir(dir) {
         Err(err) => eprintln!("Could not read dir: {:?}", err),
         Ok(entries) => {
             for entry in entries {
@@ -335,7 +329,7 @@ fn get_diff_file_name_and_validate_path(dest_file_name: &str, config: &Config) -
 }
 
 /// saves bmp file diff to disk
-fn output_bmp(path_name: &str, image: Option<bmp::Image>) {
+fn output_bmp(path_name: &str, image: Option<Image>) {
     if let Some(image) = image {
         if let Err(err) = image.save(&path_name) {
             eprintln!("Failed to save diff_file: {}\nError: {}", path_name, err)
@@ -355,11 +349,11 @@ fn print_diff_result<T: std::fmt::Debug>(verbose: bool, entry: &PathBuf, diff_va
     }
 }
 
-fn interpolate(p: bmp::Pixel) -> f32 {
+fn interpolate(p: Pixel) -> f32 {
     f32::from((p.r / 3) + (p.g / 3) + (p.b / 3)) / 10_000_000.0
 }
 
-fn subtract(p1: bmp::Pixel, p2: bmp::Pixel) -> bmp::Pixel {
+fn subtract(p1: Pixel, p2: Pixel) -> Pixel {
     let r;
     let g;
     let b;
@@ -380,7 +374,41 @@ fn subtract(p1: bmp::Pixel, p2: bmp::Pixel) -> bmp::Pixel {
         b = p2.b - p1.b
     }
 
-    bmp::Pixel { r, g, b }
+    Pixel { r, g, b }
+}
+
+fn interpolate_png(p: RGBA) -> f32 {
+    f32::from((p.r / 4) + (p.g / 4) + (p.b / 4) + (p.a / 4)) / 10_000_000.0
+}
+
+fn subtract_png(p1: RGBA, p2: RGBA) -> RGBA {
+    let r;
+    let g;
+    let b;
+    let a;
+
+    if p1.r >= p2.r {
+        r = p1.r - p2.r;
+    } else {
+        r = p2.r - p1.r
+    }
+    if p1.g >= p2.g {
+        g = p1.g - p2.g;
+    } else {
+        g = p2.g - p1.g
+    }
+    if p1.b >= p2.b {
+        b = p1.b - p2.b;
+    } else {
+        b = p2.b - p1.b
+    }
+    if p1.a >= p2.a {
+        a = p1.a - p2.a;
+    } else {
+        a = p2.a - p1.a
+    }
+
+    RGBA { r, g, b, a }
 }
 
 /// Helper to create folder hierarchies
@@ -399,63 +427,10 @@ fn create_dir_if_not_there(mut buffer: PathBuf) -> PathBuf {
 
         create_dir_if_not_there(temp_buffer);
         if !buffer.exists() && buffer != Path::new("") {
-            if let Err(err) = fs::create_dir(&buffer) {
+            if let Err(err) = create_dir(&buffer) {
                 eprintln!("Failed to create directory: {:?}", err);
             }
         }
     }
     buffer
-}
-
-/// Helper float to byte
-fn to_byte(i: f32) -> u8 {
-    if i <= 0.0 {
-        0
-    } else if i >= 255.0 / 256.0 {
-        255
-    } else {
-        (i * 256.0) as u8
-    }
-}
-
-/// Creates a saves a png with the img diff to config.diff folder
-fn output_diff_files(path_name: &str, ssim_maps: &[SsimMap]) {
-    ssim_maps.par_iter().enumerate().for_each(|(n, map_meta)| {
-        let avgssim = map_meta.ssim as f32;
-        let out: Vec<_> = map_meta
-            .map
-            .pixels()
-            .map(|ssim| {
-                let max = 1_f32 - ssim;
-                let maxsq = max * max;
-                rgb::RGBA8 {
-                    r: to_byte(maxsq * 16.0),
-                    g: to_byte(max * 3.0),
-                    b: to_byte(max / ((1_f32 - avgssim) * 4_f32)),
-                    a: 255,
-                }
-            })
-            .collect();
-
-        let write_res = lodepng::encode32_file(
-            format!("{}-{}.png", path_name, n),
-            &out,
-            map_meta.map.width(),
-            map_meta.map.height(),
-        );
-        if write_res.is_err() {
-            eprintln!("Can't write {}: {:?}", path_name, write_res);
-            std::process::exit(1);
-        }
-    });
-}
-
-/// Helper load images as png from path
-fn load<P: AsRef<Path>>(path: P) -> Result<ImgVec<RGBAPLU>, lodepng::Error> {
-    let image = lodepng::decode32_file(path.as_ref())?;
-    Ok(Img::new(
-        image.buffer.to_rgbaplu(),
-        image.width,
-        image.height,
-    ))
 }

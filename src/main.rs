@@ -112,7 +112,7 @@ mod end_to_end {
                 diff.path().to_str().unwrap(),
             ])
             .assert()
-            .stdout(predicate::str::similar("Dssim(0.0)\n"))
+            .stdout(predicate::str::similar("0.0\n"))
             .stderr(predicate::str::is_empty())
             .success();
     }
@@ -136,7 +136,7 @@ mod end_to_end {
                     ],
                 )
                 .assert()
-                .stdout(predicate::str::similar("Dssim(0.0)\n"))
+                .stdout(predicate::str::similar("0.0\n"))
                 .stderr(predicate::str::is_empty())
                 .success();
     }
@@ -156,7 +156,7 @@ mod end_to_end {
                 diff.path().to_str().unwrap(),
             ])
             .assert()
-            .stdout(predicate::str::is_match("Dssim[(]4.4469[0-9]{10,11}[)]\n").unwrap())
+            .stdout(predicate::str::is_match("2.089595\n").unwrap())
             .stderr(predicate::str::is_empty())
             .success();
     }
@@ -179,11 +179,11 @@ mod end_to_end {
                 ],
             )
             .assert()
-            .stdout(predicate::str::is_match("Dssim[(]4.4469[0-9]{10,11}[)]\n").unwrap())
+            .stdout(predicate::str::is_match("2.089595\n").unwrap())
             .stderr(predicate::str::is_empty())
             .success();
 
-        assert!(File::open(diff.path().join("rustacean-error.png-0.png"),).is_ok());
+        assert!(File::open(diff.path().join("rustacean-error.png"),).is_ok());
     }
 
     #[test]
@@ -201,9 +201,9 @@ mod end_to_end {
             ])
             .assert()
             .stdout(
-                predicate::str::is_match("Dssim[(]4.4469[0-9]{10,11}[)]\n")
+                predicate::str::is_match("2.089595\n")
                     .unwrap()
-                    .and(predicate::str::is_match("Dssim[(]((0[.]0)|(0))+[)]\n").unwrap()),
+                    .and(predicate::str::is_match("2.089595\n").unwrap()),
             )
             .stderr(predicate::str::is_empty())
             .success();
@@ -227,9 +227,9 @@ mod end_to_end {
             )
             .assert()
             .stdout(
-                predicate::str::is_match("Dssim[(]4.4469[0-9]{10,11}[)]\n")
+                predicate::str::is_match("2.089595\n")
                     .unwrap()
-                    .and(predicate::str::is_match("Dssim[(]0(.0)*[)]\n").unwrap()),
+                    .and(predicate::str::is_match("2.089595\n").unwrap()),
             )
             .stderr(predicate::str::is_empty())
             .success();
@@ -256,9 +256,9 @@ mod end_to_end {
             )
             .assert()
             .stdout(
-                predicate::str::is_match("Dssim[(]4.4469[0-9]{10,11}[)]\n")
+                predicate::str::is_match("2.089595\n")
                     .unwrap()
-                    .and(predicate::str::is_match("Dssim[(]0(.0)*[)]\n").unwrap()),
+                    .and(predicate::str::is_match("2.089595\n").unwrap()),
             )
             .stderr(predicate::str::is_empty())
             .success();
