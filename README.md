@@ -84,8 +84,11 @@ Fixed some issues and migrated to using tools as recommended by the CLI WG
 * Added human friendly panic
 
 Removed all unwraps and provide error messages.
+
 Updated dependencies.
+
 More typo fixes.
+
 Updated future features with things from the CLI WG suggestions.
 
 ### From 3.0.0
