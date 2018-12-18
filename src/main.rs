@@ -23,18 +23,15 @@ fn main() {
 #[cfg(test)]
 mod end_to_end {
     use assert_cmd::prelude::*;
-    use tempdir;
-
-    use self::tempdir::TempDir;
     use predicates::prelude::*;
-    use std::fs;
-    use std::fs::File;
+    use std::fs::{remove_file, File};
     use std::process::Command;
+    use tempdir::TempDir;
 
     #[test]
     fn it_works_for_bmp_files() {
         let diff = TempDir::new("it_works_for_bmp_files_diff").unwrap();
-        let _ = fs::remove_file(diff.path().join("rustacean-error.bmp"));
+        let _ = remove_file(diff.path().join("rustacean-error.bmp"));
         Command::main_binary()
             .unwrap()
             .args(&[
