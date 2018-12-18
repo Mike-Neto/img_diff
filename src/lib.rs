@@ -40,6 +40,11 @@ struct DiffImage {
     image: ImageType,
 }
 
+struct Pair<T> {
+    src: T,
+    dest: T,
+}
+
 /// Diffs all images using a channel to parallelize the file IO and processing.
 pub fn do_diff(config: &Config) -> io::Result<()> {
     // Get a full list of all images to load (scr and dest pairs)
@@ -53,29 +58,29 @@ pub fn do_diff(config: &Config) -> io::Result<()> {
                 if let Some(extension) = extension.to_str() {
                     let extension = extension.to_lowercase();
                     if extension == "bmp" {
-                        let src_img = DiffImage {
-                            path: scr_path.clone(),
-                            image: ImageType::BMP(open(scr_path)),
-                        };
-                        let dest_img = DiffImage {
-                            path: dest_path.clone(),
-                            image: ImageType::BMP(open(dest_path)),
-                        };
-
-                        if let Err(err) = transmitter.send((src_img, dest_img)) {
+                        if let Err(err) = transmitter.send(Pair {
+                            src: DiffImage {
+                                path: scr_path.clone(),
+                                image: ImageType::BMP(open(scr_path)),
+                            },
+                            dest: DiffImage {
+                                path: dest_path.clone(),
+                                image: ImageType::BMP(open(dest_path)),
+                            },
+                        }) {
                             eprintln!("Could not send using channel: {:?}", err);
                         };
                     } else {
-                        let src_img = DiffImage {
-                            path: scr_path.clone(),
-                            image: ImageType::PNG(decode32_file(scr_path)),
-                        };
-                        let dest_img = DiffImage {
-                            path: dest_path.clone(),
-                            image: ImageType::PNG(decode32_file(dest_path)),
-                        };
-
-                        if let Err(err) = transmitter.send((src_img, dest_img)) {
+                        if let Err(err) = transmitter.send(Pair {
+                            src: DiffImage {
+                                path: scr_path.clone(),
+                                image: ImageType::PNG(decode32_file(scr_path)),
+                            },
+                            dest: DiffImage {
+                                path: dest_path.clone(),
+                                image: ImageType::PNG(decode32_file(dest_path)),
+                            },
+                        }) {
                             eprintln!("Could not send using channel: {:?}", err);
                         };
                     }
@@ -89,14 +94,9 @@ pub fn do_diff(config: &Config) -> io::Result<()> {
     });
 
     // do the comparison in the receiving channel
-    for (src_img, dest_img) in receiver {
-        match src_img.image {
-            ImageType::BMP(src_image) => {
-                let dest_image = match dest_img.image {
-                    ImageType::BMP(dest_image) => dest_image,
-                    ImageType::PNG(_) => panic!("Mismatched image types, expected BMP got PNG"),
-                };
-
+    for pair in receiver {
+        match (pair.src.image, pair.dest.image) {
+            (ImageType::BMP(src_image), ImageType::BMP(dest_image)) => {
                 match (src_image, dest_image) {
                     (Ok(src_bmp_img), Ok(dest_bmp_img)) => {
                         let mut diff_value = 0.0; //TODO(MiguelMendes): Give a meaning to this value
@@ -115,7 +115,7 @@ pub fn do_diff(config: &Config) -> io::Result<()> {
                                 diff_value += interpolate(diff_pixel);
                                 diff_image.set_pixel(x, y, diff_pixel);
                             }
-                            if let Some(path) = dest_img.path.to_str() {
+                            if let Some(path) = pair.dest.path.to_str() {
                                 let diff_file_name =
                                     get_diff_file_name_and_validate_path(path, config);
                                 // Use another tread to write the files as necessary
@@ -133,33 +133,26 @@ pub fn do_diff(config: &Config) -> io::Result<()> {
                                     }
                                 }
                             } else {
-                                eprintln!("Failed to convert {:?} to string", dest_img.path);
+                                eprintln!("Failed to convert {:?} to string", pair.dest.path);
                             }
                         }
-                        print_diff_result(config.verbose, &src_img.path, diff_value);
+                        print_diff_result(config.verbose, &pair.src.path, diff_value);
 
                         if diff_value != 0.0 && config.verbose {
-                            if let Some(path) = src_img.path.to_str() {
+                            if let Some(path) = pair.src.path.to_str() {
                                 eprintln!("diff found in file: {:?}", String::from(path));
                             } else {
-                                eprintln!("Failed to convert {:?} to string", src_img.path);
+                                eprintln!("Failed to convert {:?} to string", pair.src.path);
                             }
                         }
                     }
-                    (Err(err), _) => {
-                        eprintln!("Failed to open src img {:?}", err);
-                    }
-                    (_, Err(err)) => {
-                        eprintln!("Failed to open dest img {:?}", err);
-                    }
+                    (Err(err), _) => eprintln!("Failed to open src img {:?}", err),
+
+                    (_, Err(err)) => eprintln!("Failed to open dest img {:?}", err),
                 }
             }
             // TODO(MiguelMendes): @Cleanup duplicated verbose messages
-            ImageType::PNG(src_image) => {
-                let dest_image = match dest_img.image {
-                    ImageType::PNG(dest_image) => dest_image,
-                    ImageType::BMP(_) => panic!("Mismatched image types, expected PNG got BMP"),
-                };
+            (ImageType::PNG(src_image), ImageType::PNG(dest_image)) => {
                 match (src_image, dest_image) {
                     (Ok(src_png_img), Ok(dest_png_img)) => {
                         if src_png_img.width != dest_png_img.width
@@ -167,12 +160,12 @@ pub fn do_diff(config: &Config) -> io::Result<()> {
                         {
                             println!("Images have different dimensions, skipping comparison");
                             if config.verbose {
-                                if let Some(path) = src_img.path.to_str() {
+                                if let Some(path) = pair.src.path.to_str() {
                                     eprintln!("diff found in file: {:?}", String::from(path));
                                 } else {
                                     eprintln!(
                                         "failed to convert path to string: {:?}",
-                                        src_img.path
+                                        pair.src.path
                                     );
                                 }
                             }
@@ -189,9 +182,9 @@ pub fn do_diff(config: &Config) -> io::Result<()> {
                                 diff_value += interpolate_png(diff_pixel);
                                 diff_img.push(diff_pixel);
                             }
-                            print_diff_result(config.verbose, &src_img.path, diff_value);
+                            print_diff_result(config.verbose, &pair.src.path, diff_value);
                             if diff_value != 0.0 {
-                                if let Some(dest_img_path) = dest_img.path.to_str() {
+                                if let Some(dest_img_path) = pair.dest.path.to_str() {
                                     let diff_file_name =
                                         get_diff_file_name_and_validate_path(dest_img_path, config);
                                     match diff_file_name {
@@ -205,7 +198,7 @@ pub fn do_diff(config: &Config) -> io::Result<()> {
                                                 eprintln!("Failed to write file: {:?}", err);
                                             }
                                             if config.verbose {
-                                                if let Some(path) = src_img.path.to_str() {
+                                                if let Some(path) = pair.src.path.to_str() {
                                                     eprintln!(
                                                         "diff found in file: {:?}",
                                                         String::from(path)
@@ -213,7 +206,7 @@ pub fn do_diff(config: &Config) -> io::Result<()> {
                                                 } else {
                                                     eprintln!(
                                                         "failed to convert path to string: {:?}",
-                                                        src_img.path
+                                                        pair.src.path
                                                     );
                                                 }
                                             }
@@ -225,7 +218,7 @@ pub fn do_diff(config: &Config) -> io::Result<()> {
                                 } else {
                                     eprintln!(
                                         "failed to convert path to string: {:?}",
-                                        dest_img.path
+                                        pair.dest.path
                                     );
                                 }
                             }
@@ -235,6 +228,7 @@ pub fn do_diff(config: &Config) -> io::Result<()> {
                     (_, Err(err)) => eprintln!("Failed to open dest img: {:?}", err),
                 }
             }
+            _ => unreachable!(),
         };
     }
 
