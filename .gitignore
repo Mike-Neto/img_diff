@@ -1,9 +1,5 @@
 # Default Rust Ignores
 /target/
-**/*.rs.bk
 
 # IDE
 /.idea
-
-# Test results
-/tests/**/*_diff/**/*.*
