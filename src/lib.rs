@@ -71,16 +71,16 @@ pub fn do_diff(config: &Config) -> io::Result<()> {
                             eprintln!("Could not send using channel: {:?}", err);
                         };
                     } else if let Err(err) = transmitter.send(Pair {
-                            src: DiffImage {
-                                path: scr_path.clone(),
-                                image: ImageType::PNG(decode32_file(scr_path)),
-                            },
-                            dest: DiffImage {
-                                path: dest_path.clone(),
-                                image: ImageType::PNG(decode32_file(dest_path)),
-                            },
-                        }) {
-                            eprintln!("Could not send using channel: {:?}", err);
+                        src: DiffImage {
+                            path: scr_path.clone(),
+                            image: ImageType::PNG(decode32_file(scr_path)),
+                        },
+                        dest: DiffImage {
+                            path: dest_path.clone(),
+                            image: ImageType::PNG(decode32_file(dest_path)),
+                        },
+                    }) {
+                        eprintln!("Could not send using channel: {:?}", err);
                     }
                 } else {
                     eprintln!("Could not convert extension to string: {:?}", extension);
@@ -145,7 +145,6 @@ pub fn do_diff(config: &Config) -> io::Result<()> {
                         }
                     }
                     (Err(err), _) => eprintln!("Failed to open src img {:?}", err),
-
                     (_, Err(err)) => eprintln!("Failed to open dest img {:?}", err),
                 }
             }
