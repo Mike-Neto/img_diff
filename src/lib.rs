@@ -45,6 +45,119 @@ struct Pair<T> {
     dest: T,
 }
 
+trait DiffImageTrait {
+    fn width(&self) -> usize;
+    fn height(&self) -> usize;
+    fn output_file(
+        &self,
+        file_name: &str,
+        image_bmp: Option<Image>,
+        image_png: Option<Vec<RGBA>>,
+        width: Option<usize>,
+        height: Option<usize>,
+    );
+
+    fn has_different_dimensions(&self, other: &Self) -> bool {
+        self.width() != other.width() || self.height() != other.height()
+    }
+    fn output_diff_file(
+        &self,
+        diff_value: f32,
+        config: &Config,
+        src_path: PathBuf,
+        dest_path: PathBuf,
+        image_bmp: Option<Image>,
+        image_png: Option<Vec<RGBA>>,
+        width: Option<usize>,
+        height: Option<usize>,
+    ) {
+        if diff_value != 0.0 {
+            if let Some(path) = dest_path.to_str() {
+                let diff_file_name = get_diff_file_name_and_validate_path(path, config);
+                match diff_file_name {
+                    Some(diff_file_name) => {
+                        // Use another tread to write the files as necessary
+                        // @Cleanup trait mess
+                        if image_bmp.is_some() {
+                            image_bmp.clone().unwrap().output_file(
+                                &diff_file_name,
+                                image_bmp,
+                                image_png,
+                                width,
+                                height,
+                            );
+                        } else {
+                            self.output_file(&diff_file_name, image_bmp, image_png, width, height);
+                        }
+
+                        if config.verbose {
+                            if let Some(path) = src_path.to_str() {
+                                eprintln!("diff found in file: {:?}", String::from(path));
+                            } else {
+                                eprintln!("failed to convert path to string: {:?}", src_path);
+                            }
+                        }
+                    }
+                    None => {
+                        eprintln!("Could not write diff file");
+                    }
+                }
+            } else {
+                eprintln!("Failed to convert {:?} to string", dest_path);
+            }
+        }
+    }
+}
+
+impl DiffImageTrait for Image {
+    fn height(&self) -> usize {
+        self.get_height() as usize
+    }
+
+    fn width(&self) -> usize {
+        self.get_width() as usize
+    }
+    // @Cleanup
+    fn output_file(
+        &self,
+        file_name: &str,
+        image_bmp: Option<Image>,
+        image_png: Option<Vec<RGBA>>,
+        width: Option<usize>,
+        height: Option<usize>,
+    ) {
+        output_bmp(&file_name, Some(image_bmp.unwrap()));
+    }
+}
+
+impl DiffImageTrait for Bitmap<RGBA> {
+    fn height(&self) -> usize {
+        self.height
+    }
+
+    fn width(&self) -> usize {
+        self.width
+    }
+
+    fn output_file(
+        &self,
+        file_name: &str,
+        image_bmp: Option<Image>,
+        image_png: Option<Vec<RGBA>>,
+        width: Option<usize>,
+        height: Option<usize>,
+    ) {
+        if let Err(err) = encode32_file(
+            file_name,
+            &image_png.unwrap(),
+            width.unwrap(),
+            height.unwrap(),
+        ) {
+            eprintln!("Failed to write file: {:?}", err);
+        }
+    }
+}
+
 /// Diffs all images using a channel to parallelize the file IO and processing.
 pub fn do_diff(config: &Config) -> io::Result<()> {
     // Get a full list of all images to load (scr and dest pairs)
@@ -97,13 +210,10 @@ pub fn do_diff(config: &Config) -> io::Result<()> {
             (ImageType::BMP(src_image), ImageType::BMP(dest_image)) => {
                 match (src_image, dest_image) {
                     (Ok(src_bmp_img), Ok(dest_bmp_img)) => {
-                        let mut diff_value = 0.0; //TODO(MiguelMendes): Give a meaning to this value
-                        if src_bmp_img.get_width() != dest_bmp_img.get_width()
-                            || src_bmp_img.get_height() != dest_bmp_img.get_height()
-                        {
-                            diff_value = 1.0; // Any value to flag it to output
-                            println!("Images have different dimensions, skipping comparison");
+                        if src_bmp_img.has_different_dimensions(&dest_bmp_img) {
+                            print_dimensions_error(config, pair.src.path);
                         } else {
+                            let mut diff_value = 0.0; //TODO(MiguelMendes): Give a meaning to this value
                             let mut diff_image =
                                 Image::new(src_bmp_img.get_width(), src_bmp_img.get_height());
                             for (x, y) in src_bmp_img.coordinates() {
@@ -113,35 +223,17 @@ pub fn do_diff(config: &Config) -> io::Result<()> {
                                 diff_value += interpolate(diff_pixel);
                                 diff_image.set_pixel(x, y, diff_pixel);
                             }
-                            if let Some(path) = pair.dest.path.to_str() {
-                                let diff_file_name =
-                                    get_diff_file_name_and_validate_path(path, config);
-                                // Use another tread to write the files as necessary
-                                match diff_file_name {
-                                    Some(diff_file_name) => {
-                                        let handle = thread::spawn(move || {
-                                            output_bmp(&diff_file_name, Some(diff_image))
-                                        });
-                                        if let Err(err) = handle.join() {
-                                            eprintln!("Could not join the handle: {:?}", err);
-                                        };
-                                    }
-                                    None => {
-                                        eprintln!("Could not write diff file");
-                                    }
-                                }
-                            } else {
-                                eprintln!("Failed to convert {:?} to string", pair.dest.path);
-                            }
-                        }
-                        print_diff_result(config.verbose, &pair.src.path, diff_value);
-
-                        if diff_value != 0.0 && config.verbose {
-                            if let Some(path) = pair.src.path.to_str() {
-                                eprintln!("diff found in file: {:?}", String::from(path));
-                            } else {
-                                eprintln!("Failed to convert {:?} to string", pair.src.path);
-                            }
+                            print_diff_result(config.verbose, &pair.src.path, diff_value);
+                            diff_image.output_diff_file(
+                                diff_value,
+                                config,
+                                pair.src.path,
+                                pair.dest.path,
+                                Some(diff_image.clone()),
+                                None,
+                                None,
+                                None,
+                            );
                         }
                     }
                     (Err(err), _) => eprintln!("Failed to open src img {:?}", err),
@@ -152,20 +244,8 @@ pub fn do_diff(config: &Config) -> io::Result<()> {
             (ImageType::PNG(src_image), ImageType::PNG(dest_image)) => {
                 match (src_image, dest_image) {
                     (Ok(src_png_img), Ok(dest_png_img)) => {
-                        if src_png_img.width != dest_png_img.width
-                            || src_png_img.height != dest_png_img.height
-                        {
-                            println!("Images have different dimensions, skipping comparison");
-                            if config.verbose {
-                                if let Some(path) = pair.src.path.to_str() {
-                                    eprintln!("diff found in file: {:?}", String::from(path));
-                                } else {
-                                    eprintln!(
-                                        "failed to convert path to string: {:?}",
-                                        pair.src.path
-                                    );
-                                }
-                            }
+                        if src_png_img.has_different_dimensions(&dest_png_img) {
+                            print_dimensions_error(config, pair.src.path);
                         } else {
                             let mut diff_value = 0.0; //TODO(MiguelMendes): Give a meaning to this value
                             let pixels = src_png_img.width * src_png_img.height;
@@ -180,45 +260,16 @@ pub fn do_diff(config: &Config) -> io::Result<()> {
                                 diff_img.push(diff_pixel);
                             }
                             print_diff_result(config.verbose, &pair.src.path, diff_value);
-                            if diff_value != 0.0 {
-                                if let Some(dest_img_path) = pair.dest.path.to_str() {
-                                    let diff_file_name =
-                                        get_diff_file_name_and_validate_path(dest_img_path, config);
-                                    match diff_file_name {
-                                        Some(diff_file_name) => {
-                                            if let Err(err) = encode32_file(
-                                                diff_file_name,
-                                                &diff_img,
-                                                src_png_img.width,
-                                                src_png_img.height,
-                                            ) {
-                                                eprintln!("Failed to write file: {:?}", err);
-                                            }
-                                            if config.verbose {
-                                                if let Some(path) = pair.src.path.to_str() {
-                                                    eprintln!(
-                                                        "diff found in file: {:?}",
-                                                        String::from(path)
-                                                    );
-                                                } else {
-                                                    eprintln!(
-                                                        "failed to convert path to string: {:?}",
-                                                        pair.src.path
-                                                    );
-                                                }
-                                            }
-                                        }
-                                        None => {
-                                            eprintln!("Could not output diff file");
-                                        }
-                                    }
-                                } else {
-                                    eprintln!(
-                                        "failed to convert path to string: {:?}",
-                                        pair.dest.path
-                                    );
-                                }
-                            }
+                            src_png_img.output_diff_file(
+                                diff_value,
+                                config,
+                                pair.src.path,
+                                pair.dest.path,
+                                None,
+                                Some(diff_img),
+                                Some(src_png_img.width),
+                                Some(src_png_img.height),
+                            );
                         }
                     }
                     (Err(err), _) => eprintln!("Failed to open src img: {:?}", err),
@@ -340,32 +391,42 @@ fn print_diff_result<T: std::fmt::Debug>(verbose: bool, entry: &PathBuf, diff_va
     }
 }
 
-fn interpolate(p: Pixel) -> f32 {
-    f32::from((p.r / 3) + (p.g / 3) + (p.b / 3)) / 10_000_000.0
+fn print_dimensions_error(config: &Config, path: PathBuf) {
+    println!("Images have different dimensions, skipping comparison");
+    if config.verbose {
+        if let Some(path) = path.to_str() {
+            eprintln!("diff found in file: {:?}", String::from(path));
+        } else {
+            eprintln!("failed to convert path to string: {:?}", path);
+        }
+    }
 }
 
-fn subtract(p1: Pixel, p2: Pixel) -> Pixel {
+fn subtract(p: Pixel, quantity: Pixel) -> Pixel {
     let r;
     let g;
     let b;
 
-    if p1.r >= p2.r {
-        r = p1.r - p2.r;
+    if p.r >= quantity.r {
+        r = p.r - quantity.r;
     } else {
-        r = p2.r - p1.r
+        r = quantity.r - p.r
     }
-    if p1.g >= p2.g {
-        g = p1.g - p2.g;
+    if p.g >= quantity.g {
+        g = p.g - quantity.g;
     } else {
-        g = p2.g - p1.g
+        g = quantity.g - p.g
     }
-    if p1.b >= p2.b {
-        b = p1.b - p2.b;
+    if p.b >= quantity.b {
+        b = p.b - quantity.b;
     } else {
-        b = p2.b - p1.b
+        b = quantity.b - p.b
     }
 
     Pixel { r, g, b }
+}
+fn interpolate(p: Pixel) -> f32 {
+    f32::from((p.r / 3) + (p.g / 3) + (p.b / 3)) / 10_000_000.0
 }
 
 fn interpolate_png(p: RGBA) -> f32 {
