@@ -45,29 +45,23 @@ struct Pair<T> {
     dest: T,
 }
 
-trait DiffImageTrait {
+trait DiffImageDimension {
     fn width(&self) -> usize;
     fn height(&self) -> usize;
-    fn output_file(
-        &self,
-        file_name: &str,
-        image_bmp: Option<Image>,
-        image_png: Option<Vec<RGBA>>,
-        width: Option<usize>,
-        height: Option<usize>,
-    );
 
     fn has_different_dimensions(&self, other: &Self) -> bool {
         self.width() != other.width() || self.height() != other.height()
     }
+}
+
+trait DiffImageOutput {
+    fn output_file(&self, file_name: &str, width: Option<usize>, height: Option<usize>);
     fn output_diff_file(
         &self,
         diff_value: f32,
         config: &Config,
         src_path: PathBuf,
         dest_path: PathBuf,
-        image_bmp: Option<Image>,
-        image_png: Option<Vec<RGBA>>,
         width: Option<usize>,
         height: Option<usize>,
     ) {
@@ -77,18 +71,7 @@ trait DiffImageTrait {
                 match diff_file_name {
                     Some(diff_file_name) => {
                         // Use another tread to write the files as necessary
-                        // @Cleanup trait mess
-                        if image_bmp.is_some() {
-                            image_bmp.clone().unwrap().output_file(
-                                &diff_file_name,
-                                image_bmp,
-                                image_png,
-                                width,
-                                height,
-                            );
-                        } else {
-                            self.output_file(&diff_file_name, image_bmp, image_png, width, height);
-                        }
+                        self.output_file(&diff_file_name, width, height);
 
                         if config.verbose {
                             if let Some(path) = src_path.to_str() {
@@ -109,7 +92,7 @@ trait DiffImageTrait {
     }
 }
 
-impl DiffImageTrait for Image {
+impl DiffImageDimension for Image {
     fn height(&self) -> usize {
         self.get_height() as usize
     }
@@ -117,20 +100,16 @@ impl DiffImageTrait for Image {
     fn width(&self) -> usize {
         self.get_width() as usize
     }
+}
+
+impl DiffImageOutput for Image {
     // @Cleanup
-    fn output_file(
-        &self,
-        file_name: &str,
-        image_bmp: Option<Image>,
-        image_png: Option<Vec<RGBA>>,
-        width: Option<usize>,
-        height: Option<usize>,
-    ) {
-        output_bmp(&file_name, Some(image_bmp.unwrap()));
+    fn output_file(&self, file_name: &str, width: Option<usize>, height: Option<usize>) {
+        output_bmp(&file_name, Some(self));
     }
 }
 
-impl DiffImageTrait for Bitmap<RGBA> {
+impl DiffImageDimension for Bitmap<RGBA> {
     fn height(&self) -> usize {
         self.height
     }
@@ -138,21 +117,11 @@ impl DiffImageTrait for Bitmap<RGBA> {
     fn width(&self) -> usize {
         self.width
     }
+}
 
-    fn output_file(
-        &self,
-        file_name: &str,
-        image_bmp: Option<Image>,
-        image_png: Option<Vec<RGBA>>,
-        width: Option<usize>,
-        height: Option<usize>,
-    ) {
-        if let Err(err) = encode32_file(
-            file_name,
-            &image_png.unwrap(),
-            width.unwrap(),
-            height.unwrap(),
-        ) {
+impl DiffImageOutput for Vec<RGBA> {
+    fn output_file(&self, file_name: &str, width: Option<usize>, height: Option<usize>) {
+        if let Err(err) = encode32_file(file_name, self, width.unwrap(), height.unwrap()) {
             eprintln!("Failed to write file: {:?}", err);
         }
     }
@@ -229,8 +198,6 @@ pub fn do_diff(config: &Config) -> io::Result<()> {
                                 config,
                                 pair.src.path,
                                 pair.dest.path,
-                                Some(diff_image.clone()),
-                                None,
                                 None,
                                 None,
                             );
@@ -240,7 +207,6 @@ pub fn do_diff(config: &Config) -> io::Result<()> {
                     (_, Err(err)) => eprintln!("Failed to open dest img {:?}", err),
                 }
             }
-            // TODO(MiguelMendes): @Cleanup duplicated verbose messages
             (ImageType::PNG(src_image), ImageType::PNG(dest_image)) => {
                 match (src_image, dest_image) {
                     (Ok(src_png_img), Ok(dest_png_img)) => {
@@ -260,13 +226,11 @@ pub fn do_diff(config: &Config) -> io::Result<()> {
                                 diff_img.push(diff_pixel);
                             }
                             print_diff_result(config.verbose, &pair.src.path, diff_value);
-                            src_png_img.output_diff_file(
+                            diff_img.output_diff_file(
                                 diff_value,
                                 config,
                                 pair.src.path,
                                 pair.dest.path,
-                                None,
-                                Some(diff_img),
                                 Some(src_png_img.width),
                                 Some(src_png_img.height),
                             );
@@ -371,7 +335,7 @@ fn get_diff_file_name_and_validate_path(dest_file_name: &str, config: &Config) -
 }
 
 /// saves bmp file diff to disk
-fn output_bmp(path_name: &str, image: Option<Image>) {
+fn output_bmp(path_name: &str, image: Option<&Image>) {
     if let Some(image) = image {
         if let Err(err) = image.save(&path_name) {
             eprintln!("Failed to save diff_file: {}\nError: {}", path_name, err)
@@ -425,6 +389,7 @@ fn subtract(p: Pixel, quantity: Pixel) -> Pixel {
 
     Pixel { r, g, b }
 }
+
 fn interpolate(p: Pixel) -> f32 {
     f32::from((p.r / 3) + (p.g / 3) + (p.b / 3)) / 10_000_000.0
 }
