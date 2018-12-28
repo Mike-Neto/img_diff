@@ -104,7 +104,7 @@ impl DiffImageDimension for Image {
 
 impl DiffImageOutput for Image {
     // @Cleanup
-    fn output_file(&self, file_name: &str, width: Option<usize>, height: Option<usize>) {
+    fn output_file(&self, file_name: &str, _width: Option<usize>, _height: Option<usize>) {
         output_bmp(&file_name, Some(self));
     }
 }
@@ -180,7 +180,7 @@ pub fn do_diff(config: &Config) -> io::Result<()> {
                 match (src_image, dest_image) {
                     (Ok(src_bmp_img), Ok(dest_bmp_img)) => {
                         if src_bmp_img.has_different_dimensions(&dest_bmp_img) {
-                            print_dimensions_error(config, pair.src.path);
+                            print_dimensions_error(config, &pair.src.path);
                         } else {
                             let mut diff_value = 0.0; //TODO(MiguelMendes): Give a meaning to this value
                             let mut diff_image =
@@ -211,7 +211,7 @@ pub fn do_diff(config: &Config) -> io::Result<()> {
                 match (src_image, dest_image) {
                     (Ok(src_png_img), Ok(dest_png_img)) => {
                         if src_png_img.has_different_dimensions(&dest_png_img) {
-                            print_dimensions_error(config, pair.src.path);
+                            print_dimensions_error(config, &pair.src.path);
                         } else {
                             let mut diff_value = 0.0; //TODO(MiguelMendes): Give a meaning to this value
                             let pixels = src_png_img.width * src_png_img.height;
@@ -247,6 +247,7 @@ pub fn do_diff(config: &Config) -> io::Result<()> {
     Ok(())
 }
 
+/// Recursively finds all files to compare based on the directory
 fn find_all_files_to_load(dir: PathBuf, config: &Config) -> io::Result<Vec<(PathBuf, PathBuf)>> {
     let mut files: Vec<(PathBuf, PathBuf)> = vec![];
     match read_dir(dir) {
@@ -355,17 +356,19 @@ fn print_diff_result<T: std::fmt::Debug>(verbose: bool, entry: &PathBuf, diff_va
     }
 }
 
-fn print_dimensions_error(config: &Config, path: PathBuf) {
+/// print dimensions errors
+fn print_dimensions_error(config: &Config, path: &PathBuf) {
     println!("Images have different dimensions, skipping comparison");
     if config.verbose {
         if let Some(path) = path.to_str() {
-            eprintln!("diff found in file: {:?}", String::from(path));
+            eprintln!("diff found in file: {:?}", path);
         } else {
             eprintln!("failed to convert path to string: {:?}", path);
         }
     }
 }
 
+/// Subtract Pixel to calculate difference
 fn subtract(p: Pixel, quantity: Pixel) -> Pixel {
     let r;
     let g;
@@ -390,14 +393,17 @@ fn subtract(p: Pixel, quantity: Pixel) -> Pixel {
     Pixel { r, g, b }
 }
 
+/// Calculates a value based on the amount of data in each
 fn interpolate(p: Pixel) -> f32 {
     f32::from((p.r / 3) + (p.g / 3) + (p.b / 3)) / 10_000_000.0
 }
 
+/// Calculates a value based on the amount of data in each
 fn interpolate_png(p: RGBA) -> f32 {
     f32::from((p.r / 4) + (p.g / 4) + (p.b / 4) + (p.a / 4)) / 10_000_000.0
 }
 
+/// Subtract Pixel to calculate difference
 fn subtract_png(p1: RGBA, p2: RGBA) -> RGBA {
     let r;
     let g;
