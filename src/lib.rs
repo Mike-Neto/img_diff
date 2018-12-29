@@ -45,9 +45,15 @@ struct Pair<T> {
     dest: T,
 }
 
-trait DiffImageDimension {
+struct DiffResult<T> {
+    value: f32,
+    image: T,
+}
+
+trait ComparableImage<T> {
     fn width(&self) -> usize;
     fn height(&self) -> usize;
+    fn diff(&self, dest: Self) -> DiffResult<T>;
 
     fn has_different_dimensions(&self, other: &Self) -> bool {
         self.width() != other.width() || self.height() != other.height()
@@ -92,13 +98,26 @@ trait DiffImageOutput {
     }
 }
 
-impl DiffImageDimension for Image {
+impl ComparableImage<Image> for Image {
     fn height(&self) -> usize {
         self.get_height() as usize
     }
 
     fn width(&self) -> usize {
         self.get_width() as usize
+    }
+    fn diff(&self, dest: Self) -> DiffResult<Image> {
+        let mut value = 0.0; //TODO(MiguelMendes): Give a meaning to this value
+        let mut image = Image::new(self.get_width(), self.get_height());
+        for (x, y) in self.coordinates() {
+            let dest_pixel = dest.get_pixel(x, y);
+            let src_pixel = self.get_pixel(x, y);
+            let diff_pixel = subtract(src_pixel, dest_pixel);
+            value += interpolate(diff_pixel);
+            image.set_pixel(x, y, diff_pixel);
+        }
+
+        DiffResult { value, image }
     }
 }
 
@@ -109,13 +128,28 @@ impl DiffImageOutput for Image {
     }
 }
 
-impl DiffImageDimension for Bitmap<RGBA> {
+impl ComparableImage<Vec<RGBA>> for Bitmap<RGBA> {
     fn height(&self) -> usize {
         self.height
     }
 
     fn width(&self) -> usize {
         self.width
+    }
+
+    fn diff(&self, dest: Self) -> DiffResult<Vec<RGBA>> {
+        let mut value = 0.0; //TODO(MiguelMendes): Give a meaning to this value
+        let pixels = self.width * self.height;
+        let mut image: Vec<RGBA> = Vec::with_capacity(pixels * std::mem::size_of::<RGBA>());
+        for i in 0..pixels {
+            let src_pixel = self.buffer[i];
+            let dest_pixel = dest.buffer[i];
+
+            let diff_pixel = subtract_png(src_pixel, dest_pixel);
+            value += interpolate_png(diff_pixel);
+            image.push(diff_pixel);
+        }
+        DiffResult { value, image }
     }
 }
 
@@ -182,19 +216,10 @@ pub fn do_diff(config: &Config) -> io::Result<()> {
                         if src_bmp_img.has_different_dimensions(&dest_bmp_img) {
                             print_dimensions_error(config, &pair.src.path);
                         } else {
-                            let mut diff_value = 0.0; //TODO(MiguelMendes): Give a meaning to this value
-                            let mut diff_image =
-                                Image::new(src_bmp_img.get_width(), src_bmp_img.get_height());
-                            for (x, y) in src_bmp_img.coordinates() {
-                                let dest_pixel = dest_bmp_img.get_pixel(x, y);
-                                let src_pixel = src_bmp_img.get_pixel(x, y);
-                                let diff_pixel = subtract(src_pixel, dest_pixel);
-                                diff_value += interpolate(diff_pixel);
-                                diff_image.set_pixel(x, y, diff_pixel);
-                            }
-                            print_diff_result(config.verbose, &pair.src.path, diff_value);
-                            diff_image.output_diff_file(
-                                diff_value,
+                            let diff_result = src_bmp_img.diff(dest_bmp_img);
+                            print_diff_result(config.verbose, &pair.src.path, diff_result.value);
+                            diff_result.image.output_diff_file(
+                                diff_result.value,
                                 config,
                                 pair.src.path,
                                 pair.dest.path,
@@ -213,21 +238,10 @@ pub fn do_diff(config: &Config) -> io::Result<()> {
                         if src_png_img.has_different_dimensions(&dest_png_img) {
                             print_dimensions_error(config, &pair.src.path);
                         } else {
-                            let mut diff_value = 0.0; //TODO(MiguelMendes): Give a meaning to this value
-                            let pixels = src_png_img.width * src_png_img.height;
-                            let mut diff_img: Vec<RGBA> =
-                                Vec::with_capacity(pixels * std::mem::size_of::<RGBA>());
-                            for i in 0..pixels {
-                                let src_pixel = src_png_img.buffer[i];
-                                let dest_pixel = dest_png_img.buffer[i];
-
-                                let diff_pixel = subtract_png(src_pixel, dest_pixel);
-                                diff_value += interpolate_png(diff_pixel);
-                                diff_img.push(diff_pixel);
-                            }
-                            print_diff_result(config.verbose, &pair.src.path, diff_value);
-                            diff_img.output_diff_file(
-                                diff_value,
+                            let diff_result = src_png_img.diff(dest_png_img);
+                            print_diff_result(config.verbose, &pair.src.path, diff_result.value);
+                            diff_result.image.output_diff_file(
+                                diff_result.value,
                                 config,
                                 pair.src.path,
                                 pair.dest.path,
