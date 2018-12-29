@@ -51,8 +51,8 @@ struct DiffResult<T> {
 }
 
 trait ComparableImage<T> {
-    fn width(&self) -> usize;
     fn height(&self) -> usize;
+    fn width(&self) -> usize;
     fn diff(&self, dest: Self) -> DiffResult<T>;
 
     fn has_different_dimensions(&self, other: &Self) -> bool {
@@ -102,7 +102,6 @@ impl ComparableImage<Image> for Image {
     fn height(&self) -> usize {
         self.get_height() as usize
     }
-
     fn width(&self) -> usize {
         self.get_width() as usize
     }
@@ -122,7 +121,6 @@ impl ComparableImage<Image> for Image {
 }
 
 impl DiffImageOutput for Image {
-    // @Cleanup
     fn output_file(&self, file_name: &str, _width: Option<usize>, _height: Option<usize>) {
         output_bmp(&file_name, Some(self));
     }
@@ -132,11 +130,9 @@ impl ComparableImage<Vec<RGBA>> for Bitmap<RGBA> {
     fn height(&self) -> usize {
         self.height
     }
-
     fn width(&self) -> usize {
         self.width
     }
-
     fn diff(&self, dest: Self) -> DiffResult<Vec<RGBA>> {
         let mut value = 0.0; //TODO(MiguelMendes): Give a meaning to this value
         let pixels = self.width * self.height;
