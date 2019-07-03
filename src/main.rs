@@ -1,8 +1,10 @@
 use human_panic::*;
-use img_diff::{do_diff, Config};
+use img_diff::{do_diff, Config, do_img_diff};
 use structopt::StructOpt;
 
 fn main() {
+    do_img_diff();
+/*
     let config = Config::from_args();
     setup_panic!();
 
@@ -18,6 +20,7 @@ fn main() {
         }
         Err(err) => eprintln!("Error occurred: {:?}", err),
     }
+*/
 }
 
 #[cfg(test)]

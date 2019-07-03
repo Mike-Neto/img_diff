@@ -3,7 +3,7 @@
 //! `img_diff` is a cmd line tool to diff images in 2 folders
 //! you can pass -h to see the help
 //!
-use bmp::{open, BmpError, Image, Pixel};
+use bmp::{open, BmpError, Image};
 use lodepng::{decode32_file, encode32_file, ffi, Bitmap, RGBA};
 use std::fs::{create_dir, read_dir};
 use std::io;
@@ -379,7 +379,7 @@ fn print_dimensions_error(config: &Config, path: &PathBuf) {
 }
 
 /// Subtract Pixel to calculate difference
-fn subtract(p: Pixel, quantity: Pixel) -> Pixel {
+fn subtract(p: bmp::Pixel, quantity: bmp::Pixel) -> bmp::Pixel {
     let r;
     let g;
     let b;
@@ -400,11 +400,11 @@ fn subtract(p: Pixel, quantity: Pixel) -> Pixel {
         b = quantity.b - p.b
     }
 
-    Pixel { r, g, b }
+    bmp::Pixel { r, g, b }
 }
 
 /// Calculates a value based on the amount of data in each
-fn interpolate(p: Pixel) -> f32 {
+fn interpolate(p: bmp::Pixel) -> f32 {
     f32::from((p.r / 3) + (p.g / 3) + (p.b / 3)) / 10_000_000.0
 }
 
@@ -466,4 +466,54 @@ fn create_dir_if_not_there(mut buffer: PathBuf) -> PathBuf {
         }
     }
     buffer
+}
+
+
+use std::env;
+use std::fs::File;
+use image::{GenericImageView, GenericImage, DynamicImage, Pixel};
+
+pub fn do_img_diff() {
+    let (file1, file2) = if env::args().count() == 3 {
+        (env::args().nth(1).unwrap(), env::args().nth(2).unwrap())
+    } else {
+        panic!("Please enter a file")
+    };
+
+    // Use the open function to load an image from a Path.
+    // ```open``` returns a dynamic image.
+    let im1 = image::open(&Path::new(&file1)).unwrap();
+    let im2 = image::open(&Path::new(&file2)).unwrap();
+
+    // The dimensions method returns the images width and height
+    println!("dimensions 1 {:?}", im1.dimensions());
+    println!("dimensions 1 {:?}", im2.dimensions());
+
+    /*let img3 = */ subtract_image(&im1, &im2);
+
+    // The color method returns the image's ColorType
+    println!("1 {:?}", im1.color());
+    println!("1 {:?}", im2.color());
+
+
+/*
+    let fout = &mut File::create(&Path::new(&format!("{}.png", file))).unwrap();
+
+    // Write the contents of this image to the Writer in PNG format.
+    im.write_to(fout, image::PNG).unwrap();
+*/
+}
+
+fn subtract_image(a: &DynamicImage, b: &DynamicImage) -> DynamicImage {
+    let diff_pixels = a.pixels().zip(b.pixels()).map(|((_, _, pa), (_, _, pb))| {
+        pa.channels().iter().zip(pb.channels().iter()).map(|(ca, cb)| {
+            if ca > cb {
+                ca - cb
+            } else {
+                cb - ca
+            }
+        }).collect::<Vec<u8>>()
+    }).collect();
+    let dim = a.dimensions();
+    DynamicImage::new_rgba8(dim.0, dim.1)
 }
