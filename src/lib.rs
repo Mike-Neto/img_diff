@@ -474,6 +474,7 @@ use std::fs::File;
 use image::{GenericImageView, GenericImage, DynamicImage, Pixel};
 
 pub fn do_img_diff() {
+/*
     let (file1, file2) = if env::args().count() == 3 {
         (env::args().nth(1).unwrap(), env::args().nth(2).unwrap())
     } else {
@@ -496,14 +497,13 @@ pub fn do_img_diff() {
     println!("1 {:?}", im2.color());
 
 
-/*
     let fout = &mut File::create(&Path::new(&format!("{}.png", file))).unwrap();
 
     // Write the contents of this image to the Writer in PNG format.
     im.write_to(fout, image::PNG).unwrap();
 */
 }
-
+/*
 fn subtract_image(a: &DynamicImage, b: &DynamicImage) -> DynamicImage {
     let diff_pixels = a.pixels().zip(b.pixels()).map(|((_, _, pa), (_, _, pb))| {
         pa.channels().iter().zip(pb.channels().iter()).map(|(ca, cb)| {
@@ -517,3 +517,4 @@ fn subtract_image(a: &DynamicImage, b: &DynamicImage) -> DynamicImage {
     let dim = a.dimensions();
     DynamicImage::new_rgba8(dim.0, dim.1)
 }
+*/

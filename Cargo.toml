@@ -16,15 +16,15 @@ exclude = [
 [dependencies]
 lodepng = "2.4.2"
 bmp = "0.4.0"
-structopt = "0.2.14"
+structopt = "0.2.18"
 human-panic = "1.0.1"
-image = "0.21.1"
+image = "0.21.2"
 
 [dev-dependencies]
-criterion = "0.2.9"
+criterion = "0.2.11"
 tempdir = "0.3.7"
-assert_cmd = "0.10.2"
-predicates = "1.0.0"
+assert_cmd = "0.11.1"
+predicates = "1.0.1"
 
 [[bench]]
 name = "bench"

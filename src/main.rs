@@ -1,10 +1,9 @@
 use human_panic::*;
-use img_diff::{do_diff, Config, do_img_diff};
+use img_diff::{do_diff, do_img_diff, Config};
 use structopt::StructOpt;
 
 fn main() {
-    do_img_diff();
-/*
+    // do_img_diff();
     let config = Config::from_args();
     setup_panic!();
 
@@ -20,7 +19,6 @@ fn main() {
         }
         Err(err) => eprintln!("Error occurred: {:?}", err),
     }
-*/
 }
 
 #[cfg(test)]
@@ -35,7 +33,7 @@ mod end_to_end {
     fn it_works_for_bmp_files() {
         let diff = TempDir::new("it_works_for_bmp_files_diff").unwrap();
         let _ = remove_file(diff.path().join("rustacean-error.bmp"));
-        Command::main_binary()
+        Command::cargo_bin("img_diff")
             .unwrap()
             .args(&[
                 "-s",
@@ -56,7 +54,7 @@ mod end_to_end {
     }
     #[test]
     fn it_prints_usage_text_when_no_args_are_provided() {
-        Command::main_binary()
+        Command::cargo_bin("img_diff")
             .unwrap()
             .assert()
             .stdout(predicates::str::is_empty())
@@ -66,13 +64,13 @@ mod end_to_end {
 
     #[test]
     fn it_prints_help_text_when_help_arg_is_provided() {
-        Command::main_binary()
+        Command::cargo_bin("img_diff")
             .unwrap()
             .args(&["-h"])
             .assert()
             .stdout(predicates::str::is_empty().not())
             .success();
-        Command::main_binary()
+        Command::cargo_bin("img_diff")
             .unwrap()
             .args(&["--help"])
             .assert()
@@ -82,7 +80,7 @@ mod end_to_end {
 
     #[test]
     fn it_fails_when_path_is_provided_but_are_not_there() {
-        Command::main_binary()
+        Command::cargo_bin("img_diff")
             .unwrap()
             .args(&[
                 "-s",
@@ -101,7 +99,7 @@ mod end_to_end {
     #[test]
     fn it_works_for_equal_images() {
         let diff = TempDir::new("it_works_for_equal_images_diff").unwrap();
-        Command::main_binary()
+        Command::cargo_bin("img_diff")
             .unwrap()
             .args(&[
                 "-s",
@@ -123,7 +121,7 @@ mod end_to_end {
         let path = temp
             .path()
             .join("it_works_for_equal_images_without_diff_folder_been_created_diff");
-        Command::main_binary()
+        Command::cargo_bin("img_diff")
                 .unwrap()
                 .args(
                     &[
@@ -145,7 +143,7 @@ mod end_to_end {
     fn it_works_for_different_images() {
         let diff = TempDir::new("it_works_for_different_images").unwrap();
 
-        Command::main_binary()
+        Command::cargo_bin("img_diff")
             .unwrap()
             .args(&[
                 "-s",
@@ -166,7 +164,7 @@ mod end_to_end {
         let diff =
             TempDir::new("it_works_for_different_images_and_produces_diff_file_diff").unwrap();
 
-        Command::main_binary()
+        Command::cargo_bin("img_diff")
             .unwrap()
             .args(
                 &[
@@ -189,7 +187,7 @@ mod end_to_end {
     #[test]
     fn it_works_for_nested_folders() {
         let diff = TempDir::new("it_works_for_nested_folders_diff").unwrap();
-        Command::main_binary()
+        Command::cargo_bin("img_diff")
             .unwrap()
             .args(&[
                 "-s",
@@ -213,7 +211,7 @@ mod end_to_end {
     fn it_works_for_more_files_in_scr_than_dest() {
         let diff = TempDir::new("it_works_for_more_files_in_scr_than_dest_diff").unwrap();
 
-        Command::main_binary()
+        Command::cargo_bin("img_diff")
             .unwrap()
             .args(
                 &[
@@ -242,7 +240,7 @@ mod end_to_end {
             .path()
             .join("it_works_when_diff_folder_is_not_created_diff");
 
-        Command::main_binary()
+        Command::cargo_bin("img_diff")
             .unwrap()
             .args(
                 &[
@@ -271,7 +269,7 @@ mod end_to_end {
             .path()
             .join("it_works_when_images_have_different_dimensions_diff");
 
-        Command::main_binary()
+        Command::cargo_bin("img_diff")
             .unwrap()
             .args(
                 &[
@@ -296,7 +294,7 @@ mod end_to_end {
     #[test]
     fn when_in_verbose_mode_prints_each_file_compare() {
         let diff = TempDir::new("it_works_for_equal_images_diff").unwrap();
-        Command::main_binary()
+        Command::cargo_bin("img_diff")
             .unwrap()
             .args(&[
                 "-v",
@@ -316,7 +314,7 @@ mod end_to_end {
     #[test]
     fn when_in_verbose_mode_prints_each_file_diff_to_stderr() {
         let diff = TempDir::new("it_works_for_different_images_diff").unwrap();
-        Command::main_binary()
+        Command::cargo_bin("img_diff")
             .unwrap()
             .args(&[
                 "-v",
