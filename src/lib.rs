@@ -74,9 +74,9 @@ fn output_diff_file(
 }
 
 fn subtract_image(a: &DynamicImage, b: &DynamicImage) -> (f64, DynamicImage) {
-    let dim = a.dimensions();
-    let mut diff_image = DynamicImage::new_rgba8(dim.0, dim.1);
-    let max_value: f64 = dim.0 as f64 * dim.1 as f64 * 4.0 * 255.0;
+    let (x_dim, y_dim) = a.dimensions();
+    let mut diff_image = DynamicImage::new_rgba8(x_dim, y_dim);
+    let max_value: f64 = x_dim as f64 * y_dim as f64 * 4.0 * 255.0;
     let mut current_value: f64 = 0.0;
     for ((x, y, pixel_a), (_, _, pixel_b)) in a.pixels().zip(b.pixels()) {
         let r = 255 - subtract_and_prevent_overflow(pixel_a[0], pixel_b[0]);
@@ -89,7 +89,7 @@ fn subtract_image(a: &DynamicImage, b: &DynamicImage) -> (f64, DynamicImage) {
         current_value += a as f64;
         diff_image.put_pixel(x, y, image::Rgba([r, g, b, a]));
     }
-    (100.0 - (max_value / current_value * 100.0), diff_image)
+    (100.0 - ((current_value * 100.0) / max_value), diff_image)
 }
 
 fn subtract_and_prevent_overflow(a: u8, b: u8) -> u8 {
