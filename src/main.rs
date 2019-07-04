@@ -153,7 +153,7 @@ mod end_to_end {
                 diff.path().to_str().unwrap(),
             ])
             .assert()
-            .stdout(predicate::str::is_match("2.089595\n").unwrap())
+            .stdout(predicate::str::is_match("93.44687965763373%\n").unwrap())
             .stderr(predicate::str::is_empty())
             .success();
     }
@@ -176,7 +176,7 @@ mod end_to_end {
                 ],
             )
             .assert()
-            .stdout(predicate::str::is_match("2.089595\n").unwrap())
+            .stdout(predicate::str::is_match("93.44687965763373%\n").unwrap())
             .stderr(predicate::str::is_empty())
             .success();
 
@@ -198,9 +198,9 @@ mod end_to_end {
             ])
             .assert()
             .stdout(
-                predicate::str::is_match("2.089595\n")
+                predicate::str::is_match("93.44687965763373%\n")
                     .unwrap()
-                    .and(predicate::str::is_match("2.089595\n").unwrap()),
+                    .and(predicate::str::is_match("93.44687965763373%\n").unwrap()),
             )
             .stderr(predicate::str::is_empty())
             .success();
@@ -224,9 +224,9 @@ mod end_to_end {
             )
             .assert()
             .stdout(
-                predicate::str::is_match("2.089595\n")
+                predicate::str::is_match("93.44687965763373%\n")
                     .unwrap()
-                    .and(predicate::str::is_match("2.089595\n").unwrap()),
+                    .and(predicate::str::is_match("93.44687965763373%\n").unwrap()),
             )
             .stderr(predicate::str::is_empty())
             .success();
@@ -253,9 +253,9 @@ mod end_to_end {
             )
             .assert()
             .stdout(
-                predicate::str::is_match("2.089595\n")
+                predicate::str::is_match("93.44687965763373%\n")
                     .unwrap()
-                    .and(predicate::str::is_match("2.089595\n").unwrap()),
+                    .and(predicate::str::is_match("93.44687965763373%\n").unwrap()),
             )
             .stderr(predicate::str::is_empty())
             .success();
