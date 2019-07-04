@@ -468,13 +468,11 @@ fn create_dir_if_not_there(mut buffer: PathBuf) -> PathBuf {
     buffer
 }
 
-
+use image::{DynamicImage, GenericImage, GenericImageView, ImageBuffer, Pixel, RgbImage};
 use std::env;
 use std::fs::File;
-use image::{GenericImageView, GenericImage, DynamicImage, Pixel};
 
 pub fn do_img_diff() {
-/*
     let (file1, file2) = if env::args().count() == 3 {
         (env::args().nth(1).unwrap(), env::args().nth(2).unwrap())
     } else {
@@ -486,35 +484,32 @@ pub fn do_img_diff() {
     let im1 = image::open(&Path::new(&file1)).unwrap();
     let im2 = image::open(&Path::new(&file2)).unwrap();
 
-    // The dimensions method returns the images width and height
-    println!("dimensions 1 {:?}", im1.dimensions());
-    println!("dimensions 1 {:?}", im2.dimensions());
-
-    /*let img3 = */ subtract_image(&im1, &im2);
-
-    // The color method returns the image's ColorType
-    println!("1 {:?}", im1.color());
-    println!("1 {:?}", im2.color());
-
-
-    let fout = &mut File::create(&Path::new(&format!("{}.png", file))).unwrap();
+    let im = subtract_image(&im1, &im2);
+    let new_path = format!("{}.png", file1);
+    let fout = &mut File::create(&Path::new(&new_path)).unwrap();
 
     // Write the contents of this image to the Writer in PNG format.
     im.write_to(fout, image::PNG).unwrap();
-*/
 }
-/*
+
 fn subtract_image(a: &DynamicImage, b: &DynamicImage) -> DynamicImage {
-    let diff_pixels = a.pixels().zip(b.pixels()).map(|((_, _, pa), (_, _, pb))| {
-        pa.channels().iter().zip(pb.channels().iter()).map(|(ca, cb)| {
-            if ca > cb {
-                ca - cb
-            } else {
-                cb - ca
-            }
-        }).collect::<Vec<u8>>()
-    }).collect();
     let dim = a.dimensions();
-    DynamicImage::new_rgba8(dim.0, dim.1)
+    let mut diff_image = DynamicImage::new_rgba8(dim.0, dim.1);
+    for ((x, y, pixel_a), (_, _, pixel_b)) in a.pixels().zip(b.pixels()) {
+        let r = 255 - subtract_and_prevent_overflow(pixel_a[0], pixel_b[0]);
+        let g = 255 - subtract_and_prevent_overflow(pixel_a[1], pixel_b[1]);
+        let b = 255 - subtract_and_prevent_overflow(pixel_a[2], pixel_b[2]);
+        let a = 255 - subtract_and_prevent_overflow(pixel_a[3], pixel_b[3]);
+        dbg!([r, g, b, a]);
+        diff_image.put_pixel(x, y, image::Rgba([r, g, b, a]));
+    }
+    diff_image
 }
-*/
+
+fn subtract_and_prevent_overflow(a: u8, b: u8) -> u8 {
+    if a > b {
+        a - b
+    } else {
+        b - a
+    }
+}
