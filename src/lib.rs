@@ -3,9 +3,8 @@
 //! `img_diff` is a cmd line tool to diff images in 2 folders
 //! you can pass -h to see the help
 //!
-use bmp::{open, BmpError, Image};
-use lodepng::{decode32_file, encode32_file, ffi, Bitmap, RGBA};
-use std::fs::{create_dir, read_dir};
+use image::{DynamicImage, GenericImage, GenericImageView, ImageResult};
+use std::fs::{create_dir, read_dir, File};
 use std::io;
 use std::path::{Path, PathBuf};
 use std::sync::mpsc;
@@ -30,14 +29,9 @@ pub struct Config {
     pub verbose: bool,
 }
 
-enum ImageType {
-    BMP(Result<Image, BmpError>),
-    PNG(Result<Bitmap<RGBA>, ffi::Error>),
-}
-
 struct DiffImage {
     path: PathBuf,
-    image: ImageType,
+    image: ImageResult<DynamicImage>,
 }
 
 struct Pair<T> {
@@ -45,115 +39,64 @@ struct Pair<T> {
     dest: T,
 }
 
-struct DiffResult<T> {
-    value: f32,
-    image: T,
-}
+fn output_diff_file(
+    diff_image: DynamicImage,
+    diff_value: f32,
+    config: &Config,
+    src_path: PathBuf,
+    dest_path: PathBuf,
+) {
+    if diff_value != 0.0 {
+        if let Some(path) = dest_path.to_str() {
+            let diff_file_name = get_diff_file_name_and_validate_path(path, config);
+            match diff_file_name {
+                Some(diff_file_name) => {
+                    // Use another tread to write the files as necessary
+                    let file_out = &mut File::create(&Path::new(&diff_file_name)).unwrap();
+                    diff_image.write_to(file_out, image::PNG).unwrap();
 
-trait ComparableImage<T> {
-    fn height(&self) -> usize;
-    fn width(&self) -> usize;
-    fn diff(&self, dest: Self) -> DiffResult<T>;
-
-    fn has_different_dimensions(&self, other: &Self) -> bool {
-        self.width() != other.width() || self.height() != other.height()
-    }
-}
-
-trait DiffImageOutput {
-    fn output_file(&self, file_name: &str, width: Option<usize>, height: Option<usize>);
-    fn output_diff_file(
-        &self,
-        diff_value: f32,
-        config: &Config,
-        src_path: PathBuf,
-        dest_path: PathBuf,
-        width: Option<usize>,
-        height: Option<usize>,
-    ) {
-        if diff_value != 0.0 {
-            if let Some(path) = dest_path.to_str() {
-                let diff_file_name = get_diff_file_name_and_validate_path(path, config);
-                match diff_file_name {
-                    Some(diff_file_name) => {
-                        // Use another tread to write the files as necessary
-                        self.output_file(&diff_file_name, width, height);
-
-                        if config.verbose {
-                            if let Some(path) = src_path.to_str() {
-                                eprintln!("diff found in file: {:?}", String::from(path));
-                            } else {
-                                eprintln!("failed to convert path to string: {:?}", src_path);
-                            }
+                    if config.verbose {
+                        if let Some(path) = src_path.to_str() {
+                            eprintln!("diff found in file: {:?}", String::from(path));
+                        } else {
+                            eprintln!("failed to convert path to string: {:?}", src_path);
                         }
                     }
-                    None => {
-                        eprintln!("Could not write diff file");
-                    }
                 }
-            } else {
-                eprintln!("Failed to convert {:?} to string", dest_path);
+                None => {
+                    eprintln!("Could not write diff file");
+                }
             }
+        } else {
+            eprintln!("Failed to convert {:?} to string", dest_path);
         }
     }
 }
 
-impl ComparableImage<Image> for Image {
-    fn height(&self) -> usize {
-        self.get_height() as usize
+fn subtract_image(a: &DynamicImage, b: &DynamicImage) -> (f32, DynamicImage) {
+    let dim = a.dimensions();
+    let mut diff_image = DynamicImage::new_rgba8(dim.0, dim.1);
+    let max_value: f32 = dim.0 as f32 * dim.1 as f32 * 4.0;
+    let mut current_value: f32 = 0.0;
+    for ((x, y, pixel_a), (_, _, pixel_b)) in a.pixels().zip(b.pixels()) {
+        let r = 255 - subtract_and_prevent_overflow(pixel_a[0], pixel_b[0]);
+        let g = 255 - subtract_and_prevent_overflow(pixel_a[1], pixel_b[1]);
+        let b = 255 - subtract_and_prevent_overflow(pixel_a[2], pixel_b[2]);
+        let a = 255 - subtract_and_prevent_overflow(pixel_a[3], pixel_b[3]);
+        current_value = current_value + r as f32;
+        current_value = current_value + g as f32;
+        current_value = current_value + b as f32;
+        current_value = current_value + a as f32;
+        diff_image.put_pixel(x, y, image::Rgba([r, g, b, a]));
     }
-    fn width(&self) -> usize {
-        self.get_width() as usize
-    }
-    fn diff(&self, dest: Self) -> DiffResult<Image> {
-        let mut value = 0.0; //TODO(MiguelMendes): Give a meaning to this value
-        let mut image = Image::new(self.get_width(), self.get_height());
-        for (x, y) in self.coordinates() {
-            let dest_pixel = dest.get_pixel(x, y);
-            let src_pixel = self.get_pixel(x, y);
-            let diff_pixel = subtract(src_pixel, dest_pixel);
-            value += interpolate(diff_pixel);
-            image.set_pixel(x, y, diff_pixel);
-        }
-
-        DiffResult { value, image }
-    }
+    (current_value * 100.0 / max_value, diff_image)
 }
 
-impl DiffImageOutput for Image {
-    fn output_file(&self, file_name: &str, _width: Option<usize>, _height: Option<usize>) {
-        output_bmp(&file_name, Some(self));
-    }
-}
-
-impl ComparableImage<Vec<RGBA>> for Bitmap<RGBA> {
-    fn height(&self) -> usize {
-        self.height
-    }
-    fn width(&self) -> usize {
-        self.width
-    }
-    fn diff(&self, dest: Self) -> DiffResult<Vec<RGBA>> {
-        let mut value = 0.0; //TODO(MiguelMendes): Give a meaning to this value
-        let pixels = self.width * self.height;
-        let mut image: Vec<RGBA> = Vec::with_capacity(pixels * std::mem::size_of::<RGBA>());
-        for i in 0..pixels {
-            let src_pixel = self.buffer[i];
-            let dest_pixel = dest.buffer[i];
-
-            let diff_pixel = subtract_png(src_pixel, dest_pixel);
-            value += interpolate_png(diff_pixel);
-            image.push(diff_pixel);
-        }
-        DiffResult { value, image }
-    }
-}
-
-impl DiffImageOutput for Vec<RGBA> {
-    fn output_file(&self, file_name: &str, width: Option<usize>, height: Option<usize>) {
-        if let Err(err) = encode32_file(file_name, self, width.unwrap(), height.unwrap()) {
-            eprintln!("Failed to write file: {:?}", err);
-        }
+fn subtract_and_prevent_overflow(a: u8, b: u8) -> u8 {
+    if a > b {
+        a - b
+    } else {
+        b - a
     }
 }
 
@@ -166,91 +109,41 @@ pub fn do_diff(config: &Config) -> io::Result<()> {
     let (transmitter, receiver) = mpsc::channel();
     thread::spawn(move || {
         for (scr_path, dest_path) in files_to_load {
-            if let Some(extension) = scr_path.extension() {
-                if let Some(extension) = extension.to_str() {
-                    let extension = extension.to_lowercase();
-                    if extension == "bmp" {
-                        if let Err(err) = transmitter.send(Pair {
-                            src: DiffImage {
-                                path: scr_path.clone(),
-                                image: ImageType::BMP(open(scr_path)),
-                            },
-                            dest: DiffImage {
-                                path: dest_path.clone(),
-                                image: ImageType::BMP(open(dest_path)),
-                            },
-                        }) {
-                            eprintln!("Could not send using channel: {:?}", err);
-                        };
-                    } else if let Err(err) = transmitter.send(Pair {
-                        src: DiffImage {
-                            path: scr_path.clone(),
-                            image: ImageType::PNG(decode32_file(scr_path)),
-                        },
-                        dest: DiffImage {
-                            path: dest_path.clone(),
-                            image: ImageType::PNG(decode32_file(dest_path)),
-                        },
-                    }) {
-                        eprintln!("Could not send using channel: {:?}", err);
-                    }
-                } else {
-                    eprintln!("Could not convert extension to string: {:?}", extension);
-                }
-            } else {
-                eprintln!("Could not get extension from file: {:?}", scr_path);
-            }
+            if let Err(err) = transmitter.send(Pair {
+                src: DiffImage {
+                    path: scr_path.clone(),
+                    image: image::open(scr_path),
+                },
+                dest: DiffImage {
+                    path: dest_path.clone(),
+                    image: image::open(dest_path),
+                },
+            }) {
+                eprintln!("Could not send using channel: {:?}", err);
+            };
         }
     });
 
     // do the comparison in the receiving channel
     for pair in receiver {
         match (pair.src.image, pair.dest.image) {
-            (ImageType::BMP(src_image), ImageType::BMP(dest_image)) => {
-                match (src_image, dest_image) {
-                    (Ok(src_bmp_img), Ok(dest_bmp_img)) => {
-                        if src_bmp_img.has_different_dimensions(&dest_bmp_img) {
-                            print_dimensions_error(config, &pair.src.path);
-                        } else {
-                            let diff_result = src_bmp_img.diff(dest_bmp_img);
-                            print_diff_result(config.verbose, &pair.src.path, diff_result.value);
-                            diff_result.image.output_diff_file(
-                                diff_result.value,
-                                config,
-                                pair.src.path,
-                                pair.dest.path,
-                                None,
-                                None,
-                            );
-                        }
-                    }
-                    (Err(err), _) => eprintln!("Failed to open src img {:?}", err),
-                    (_, Err(err)) => eprintln!("Failed to open dest img {:?}", err),
+            (Ok(src_image), Ok(dest_image)) => {
+                if src_image.dimensions() != dest_image.dimensions() {
+                    print_dimensions_error(config, &pair.src.path);
+                } else {
+                    let (diff_value, diff_image) = subtract_image(&src_image, &dest_image);
+                    print_diff_result(config.verbose, &pair.src.path, diff_value);
+                    output_diff_file(
+                        diff_image,
+                        diff_value,
+                        config,
+                        pair.src.path,
+                        pair.dest.path,
+                    );
                 }
             }
-            (ImageType::PNG(src_image), ImageType::PNG(dest_image)) => {
-                match (src_image, dest_image) {
-                    (Ok(src_png_img), Ok(dest_png_img)) => {
-                        if src_png_img.has_different_dimensions(&dest_png_img) {
-                            print_dimensions_error(config, &pair.src.path);
-                        } else {
-                            let diff_result = src_png_img.diff(dest_png_img);
-                            print_diff_result(config.verbose, &pair.src.path, diff_result.value);
-                            diff_result.image.output_diff_file(
-                                diff_result.value,
-                                config,
-                                pair.src.path,
-                                pair.dest.path,
-                                Some(src_png_img.width),
-                                Some(src_png_img.height),
-                            );
-                        }
-                    }
-                    (Err(err), _) => eprintln!("Failed to open src img: {:?}", err),
-                    (_, Err(err)) => eprintln!("Failed to open dest img: {:?}", err),
-                }
-            }
-            _ => unreachable!(),
+            (Err(err), _) => eprintln!("Failed to open src img: {:?}", err),
+            (_, Err(err)) => eprintln!("Failed to open dest img: {:?}", err),
         };
     }
 
@@ -345,15 +238,6 @@ fn get_diff_file_name_and_validate_path(dest_file_name: &str, config: &Config) -
     }
 }
 
-/// saves bmp file diff to disk
-fn output_bmp(path_name: &str, image: Option<&Image>) {
-    if let Some(image) = image {
-        if let Err(err) = image.save(&path_name) {
-            eprintln!("Failed to save diff_file: {}\nError: {}", path_name, err)
-        }
-    }
-}
-
 /// print diff result
 fn print_diff_result<T: std::fmt::Debug>(verbose: bool, entry: &PathBuf, diff_value: T) {
     if verbose {
@@ -378,72 +262,6 @@ fn print_dimensions_error(config: &Config, path: &PathBuf) {
     }
 }
 
-/// Subtract Pixel to calculate difference
-fn subtract(p: bmp::Pixel, quantity: bmp::Pixel) -> bmp::Pixel {
-    let r;
-    let g;
-    let b;
-
-    if p.r >= quantity.r {
-        r = p.r - quantity.r;
-    } else {
-        r = quantity.r - p.r
-    }
-    if p.g >= quantity.g {
-        g = p.g - quantity.g;
-    } else {
-        g = quantity.g - p.g
-    }
-    if p.b >= quantity.b {
-        b = p.b - quantity.b;
-    } else {
-        b = quantity.b - p.b
-    }
-
-    bmp::Pixel { r, g, b }
-}
-
-/// Calculates a value based on the amount of data in each
-fn interpolate(p: bmp::Pixel) -> f32 {
-    f32::from((p.r / 3) + (p.g / 3) + (p.b / 3)) / 10_000_000.0
-}
-
-/// Calculates a value based on the amount of data in each
-fn interpolate_png(p: RGBA) -> f32 {
-    f32::from((p.r / 4) + (p.g / 4) + (p.b / 4) + (p.a / 4)) / 10_000_000.0
-}
-
-/// Subtract Pixel to calculate difference
-fn subtract_png(p1: RGBA, p2: RGBA) -> RGBA {
-    let r;
-    let g;
-    let b;
-    let a;
-
-    if p1.r >= p2.r {
-        r = p1.r - p2.r;
-    } else {
-        r = p2.r - p1.r
-    }
-    if p1.g >= p2.g {
-        g = p1.g - p2.g;
-    } else {
-        g = p2.g - p1.g
-    }
-    if p1.b >= p2.b {
-        b = p1.b - p2.b;
-    } else {
-        b = p2.b - p1.b
-    }
-    if p1.a >= p2.a {
-        a = p1.a - p2.a;
-    } else {
-        a = p2.a - p1.a
-    }
-
-    RGBA { r, g, b, a }
-}
-
 /// Helper to create folder hierarchies
 fn create_path(path: &Path) {
     let mut buffer = path.to_path_buf();
@@ -466,50 +284,4 @@ fn create_dir_if_not_there(mut buffer: PathBuf) -> PathBuf {
         }
     }
     buffer
-}
-
-use image::{DynamicImage, GenericImage, GenericImageView, ImageBuffer, Pixel, RgbImage};
-use std::env;
-use std::fs::File;
-
-pub fn do_img_diff() {
-    let (file1, file2) = if env::args().count() == 3 {
-        (env::args().nth(1).unwrap(), env::args().nth(2).unwrap())
-    } else {
-        panic!("Please enter a file")
-    };
-
-    // Use the open function to load an image from a Path.
-    // ```open``` returns a dynamic image.
-    let im1 = image::open(&Path::new(&file1)).unwrap();
-    let im2 = image::open(&Path::new(&file2)).unwrap();
-
-    let im = subtract_image(&im1, &im2);
-    let new_path = format!("{}.png", file1);
-    let fout = &mut File::create(&Path::new(&new_path)).unwrap();
-
-    // Write the contents of this image to the Writer in PNG format.
-    im.write_to(fout, image::PNG).unwrap();
-}
-
-fn subtract_image(a: &DynamicImage, b: &DynamicImage) -> DynamicImage {
-    let dim = a.dimensions();
-    let mut diff_image = DynamicImage::new_rgba8(dim.0, dim.1);
-    for ((x, y, pixel_a), (_, _, pixel_b)) in a.pixels().zip(b.pixels()) {
-        let r = 255 - subtract_and_prevent_overflow(pixel_a[0], pixel_b[0]);
-        let g = 255 - subtract_and_prevent_overflow(pixel_a[1], pixel_b[1]);
-        let b = 255 - subtract_and_prevent_overflow(pixel_a[2], pixel_b[2]);
-        let a = 255 - subtract_and_prevent_overflow(pixel_a[3], pixel_b[3]);
-        dbg!([r, g, b, a]);
-        diff_image.put_pixel(x, y, image::Rgba([r, g, b, a]));
-    }
-    diff_image
-}
-
-fn subtract_and_prevent_overflow(a: u8, b: u8) -> u8 {
-    if a > b {
-        a - b
-    } else {
-        b - a
-    }
 }
