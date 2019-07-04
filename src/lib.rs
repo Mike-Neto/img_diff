@@ -41,7 +41,7 @@ struct Pair<T> {
 
 fn output_diff_file(
     diff_image: DynamicImage,
-    diff_value: f32,
+    diff_value: f64,
     config: &Config,
     src_path: PathBuf,
     dest_path: PathBuf,
@@ -73,23 +73,23 @@ fn output_diff_file(
     }
 }
 
-fn subtract_image(a: &DynamicImage, b: &DynamicImage) -> (f32, DynamicImage) {
+fn subtract_image(a: &DynamicImage, b: &DynamicImage) -> (f64, DynamicImage) {
     let dim = a.dimensions();
     let mut diff_image = DynamicImage::new_rgba8(dim.0, dim.1);
-    let max_value: f32 = dim.0 as f32 * dim.1 as f32 * 4.0;
-    let mut current_value: f32 = 0.0;
+    let max_value: f64 = dim.0 as f64 * dim.1 as f64 * 4.0 * 255.0;
+    let mut current_value: f64 = 0.0;
     for ((x, y, pixel_a), (_, _, pixel_b)) in a.pixels().zip(b.pixels()) {
         let r = 255 - subtract_and_prevent_overflow(pixel_a[0], pixel_b[0]);
         let g = 255 - subtract_and_prevent_overflow(pixel_a[1], pixel_b[1]);
         let b = 255 - subtract_and_prevent_overflow(pixel_a[2], pixel_b[2]);
         let a = 255 - subtract_and_prevent_overflow(pixel_a[3], pixel_b[3]);
-        current_value = current_value + r as f32;
-        current_value = current_value + g as f32;
-        current_value = current_value + b as f32;
-        current_value = current_value + a as f32;
+        current_value += r as f64;
+        current_value += g as f64;
+        current_value += b as f64;
+        current_value += a as f64;
         diff_image.put_pixel(x, y, image::Rgba([r, g, b, a]));
     }
-    (current_value * 100.0 / max_value, diff_image)
+    (100.0 - (max_value / current_value * 100.0), diff_image)
 }
 
 fn subtract_and_prevent_overflow(a: u8, b: u8) -> u8 {
@@ -239,14 +239,14 @@ fn get_diff_file_name_and_validate_path(dest_file_name: &str, config: &Config) -
 }
 
 /// print diff result
-fn print_diff_result<T: std::fmt::Debug>(verbose: bool, entry: &PathBuf, diff_value: T) {
+fn print_diff_result(verbose: bool, entry: &PathBuf, diff_value: f64) {
     if verbose {
         println!(
-            "compared file: {:?} had diff value of: {:?}",
+            "compared file: {:?} had diff value of: {:?}%",
             entry, diff_value
         );
     } else {
-        println!("{:?}", diff_value);
+        println!("{:?}%", diff_value);
     }
 }
 
