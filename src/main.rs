@@ -44,9 +44,9 @@ mod end_to_end {
             ])
             .assert()
             .stdout(
-                predicate::str::is_match("0.0%\n|11.767643066534347%\n|7.78290972110149%\n")
+                predicate::str::is_match("0.0%\n|24.95684684960593%\n|11.424463718339283%\n")
                     .unwrap()
-                    .count(3)
+                    .count(3),
             )
             .success();
         assert!(File::open(diff.path().join("rustacean-error.bmp"),).is_ok());
@@ -153,7 +153,7 @@ mod end_to_end {
                 diff.path().to_str().unwrap(),
             ])
             .assert()
-            .stdout(predicate::str::is_match("48.30622226784838%\n").unwrap())
+            .stdout(predicate::str::is_match("63.09777321439715%\n").unwrap())
             .stderr(predicate::str::is_empty())
             .success();
     }
@@ -176,7 +176,7 @@ mod end_to_end {
                 ],
             )
             .assert()
-            .stdout(predicate::str::is_match("48.30622226784838%\n").unwrap())
+            .stdout(predicate::str::is_match("63.09777321439715%\n").unwrap())
             .stderr(predicate::str::is_empty())
             .success();
 
@@ -198,9 +198,9 @@ mod end_to_end {
             ])
             .assert()
             .stdout(
-                predicate::str::is_match("48.30622226784838%\n")
+                predicate::str::is_match("63.09777321439715%\n")
                     .unwrap()
-                    .and(predicate::str::is_match("48.30622226784838%\n").unwrap()),
+                    .and(predicate::str::is_match("63.09777321439715%\n").unwrap()),
             )
             .stderr(predicate::str::is_empty())
             .success();
@@ -224,9 +224,9 @@ mod end_to_end {
             )
             .assert()
             .stdout(
-                predicate::str::is_match("48.30622226784838%\n")
+                predicate::str::is_match("63.09777321439715%\n")
                     .unwrap()
-                    .and(predicate::str::is_match("48.30622226784838%\n").unwrap()),
+                    .and(predicate::str::is_match("63.09777321439715%\n").unwrap()),
             )
             .stderr(predicate::str::is_empty())
             .success();
@@ -253,9 +253,9 @@ mod end_to_end {
             )
             .assert()
             .stdout(
-                predicate::str::is_match("48.30622226784838%\n")
+                predicate::str::is_match("63.09777321439715%\n")
                     .unwrap()
-                    .and(predicate::str::is_match("48.30622226784838%\n").unwrap()),
+                    .and(predicate::str::is_match("63.09777321439715%\n").unwrap()),
             )
             .stderr(predicate::str::is_empty())
             .success();

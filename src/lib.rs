@@ -73,23 +73,35 @@ fn output_diff_file(
     }
 }
 
+fn max(a: u8, b: u8) -> u8 {
+    if a > b {
+        a
+    } else {
+        b
+    }
+}
+
 fn subtract_image(a: &DynamicImage, b: &DynamicImage) -> (f64, DynamicImage) {
     let (x_dim, y_dim) = a.dimensions();
     let mut diff_image = DynamicImage::new_rgba8(x_dim, y_dim);
-    let max_value: f64 = x_dim as f64 * y_dim as f64 * 4.0 * 255.0;
+    let mut max_value: f64 = 0.0;
     let mut current_value: f64 = 0.0;
     for ((x, y, pixel_a), (_, _, pixel_b)) in a.pixels().zip(b.pixels()) {
-        let r = 255 - subtract_and_prevent_overflow(pixel_a[0], pixel_b[0]);
-        let g = 255 - subtract_and_prevent_overflow(pixel_a[1], pixel_b[1]);
-        let b = 255 - subtract_and_prevent_overflow(pixel_a[2], pixel_b[2]);
-        let a = 255 - subtract_and_prevent_overflow(pixel_a[3], pixel_b[3]);
-        current_value += r as f64;
-        current_value += g as f64;
-        current_value += b as f64;
-        current_value += a as f64;
-        diff_image.put_pixel(x, y, image::Rgba([r, g, b, a]));
+        max_value += f64::from(max(pixel_a[0], pixel_b[0]));
+        max_value += f64::from(max(pixel_a[1], pixel_b[1]));
+        max_value += f64::from(max(pixel_a[2], pixel_b[2]));
+        max_value += f64::from(max(pixel_a[3], pixel_b[3]));
+        let r = subtract_and_prevent_overflow(pixel_a[0], pixel_b[0]);
+        let g = subtract_and_prevent_overflow(pixel_a[1], pixel_b[1]);
+        let b = subtract_and_prevent_overflow(pixel_a[2], pixel_b[2]);
+        let a = subtract_and_prevent_overflow(pixel_a[3], pixel_b[3]);
+        current_value += f64::from(r);
+        current_value += f64::from(g);
+        current_value += f64::from(b);
+        current_value += f64::from(a);
+        diff_image.put_pixel(x, y, image::Rgba([255 - r, 255 - g, 255 - b, 255 - a]));
     }
-    (100.0 - ((current_value * 100.0) / max_value), diff_image)
+    (((current_value * 100.0) / max_value), diff_image)
 }
 
 fn subtract_and_prevent_overflow(a: u8, b: u8) -> u8 {

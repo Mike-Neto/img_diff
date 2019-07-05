@@ -8,12 +8,7 @@
 
 Rust based Command line tool to diff images in 2 structurally similar folders and output diff images.
 
-TODO REDO ALL THIS DOCS
-BMP files are compared using a by pixel sample algorithm and the output is the MOD of the difference between each of the
-pixel components (rgb)
-
-The value returned for bmp images 0 if images are equal and a positive number that scales with the amount of differences.
-END TODO 
+The value outputted represent a percentage of how much the amount of pixel data differs from the hightest possible value for that given image in each pixel.
 
 ## Future Features
 * Support multiple format's of images (JPEG).
