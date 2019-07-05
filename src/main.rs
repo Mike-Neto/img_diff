@@ -23,19 +23,16 @@ fn main() {
 #[cfg(test)]
 mod end_to_end {
     use assert_cmd::prelude::*;
-    use tempdir;
-
-    use self::tempdir::TempDir;
     use predicates::prelude::*;
-    use std::fs;
-    use std::fs::File;
+    use std::fs::{remove_file, File};
     use std::process::Command;
+    use tempdir::TempDir;
 
     #[test]
     fn it_works_for_bmp_files() {
         let diff = TempDir::new("it_works_for_bmp_files_diff").unwrap();
-        let _ = fs::remove_file(diff.path().join("rustacean-error.bmp"));
-        Command::main_binary()
+        let _ = remove_file(diff.path().join("rustacean-error.bmp"));
+        Command::cargo_bin("img_diff")
             .unwrap()
             .args(&[
                 "-s",
@@ -47,7 +44,7 @@ mod end_to_end {
             ])
             .assert()
             .stdout(
-                predicate::str::is_match("0\n|0.0\n|0.68007237|3.7269595\n")
+                predicate::str::is_match("0.0%\n|24.95684684960593%\n|11.424463718339283%\n")
                     .unwrap()
                     .count(3),
             )
@@ -56,7 +53,7 @@ mod end_to_end {
     }
     #[test]
     fn it_prints_usage_text_when_no_args_are_provided() {
-        Command::main_binary()
+        Command::cargo_bin("img_diff")
             .unwrap()
             .assert()
             .stdout(predicates::str::is_empty())
@@ -66,13 +63,13 @@ mod end_to_end {
 
     #[test]
     fn it_prints_help_text_when_help_arg_is_provided() {
-        Command::main_binary()
+        Command::cargo_bin("img_diff")
             .unwrap()
             .args(&["-h"])
             .assert()
             .stdout(predicates::str::is_empty().not())
             .success();
-        Command::main_binary()
+        Command::cargo_bin("img_diff")
             .unwrap()
             .args(&["--help"])
             .assert()
@@ -82,7 +79,7 @@ mod end_to_end {
 
     #[test]
     fn it_fails_when_path_is_provided_but_are_not_there() {
-        Command::main_binary()
+        Command::cargo_bin("img_diff")
             .unwrap()
             .args(&[
                 "-s",
@@ -101,7 +98,7 @@ mod end_to_end {
     #[test]
     fn it_works_for_equal_images() {
         let diff = TempDir::new("it_works_for_equal_images_diff").unwrap();
-        Command::main_binary()
+        Command::cargo_bin("img_diff")
             .unwrap()
             .args(&[
                 "-s",
@@ -112,7 +109,7 @@ mod end_to_end {
                 diff.path().to_str().unwrap(),
             ])
             .assert()
-            .stdout(predicate::str::similar("Dssim(0.0)\n"))
+            .stdout(predicate::str::similar("0.0%\n"))
             .stderr(predicate::str::is_empty())
             .success();
     }
@@ -123,7 +120,7 @@ mod end_to_end {
         let path = temp
             .path()
             .join("it_works_for_equal_images_without_diff_folder_been_created_diff");
-        Command::main_binary()
+        Command::cargo_bin("img_diff")
                 .unwrap()
                 .args(
                     &[
@@ -136,7 +133,7 @@ mod end_to_end {
                     ],
                 )
                 .assert()
-                .stdout(predicate::str::similar("Dssim(0.0)\n"))
+                .stdout(predicate::str::similar("0.0%\n"))
                 .stderr(predicate::str::is_empty())
                 .success();
     }
@@ -145,7 +142,7 @@ mod end_to_end {
     fn it_works_for_different_images() {
         let diff = TempDir::new("it_works_for_different_images").unwrap();
 
-        Command::main_binary()
+        Command::cargo_bin("img_diff")
             .unwrap()
             .args(&[
                 "-s",
@@ -156,7 +153,7 @@ mod end_to_end {
                 diff.path().to_str().unwrap(),
             ])
             .assert()
-            .stdout(predicate::str::is_match("Dssim[(]4.4469[0-9]{10,11}[)]\n").unwrap())
+            .stdout(predicate::str::is_match("63.09777321439715%\n").unwrap())
             .stderr(predicate::str::is_empty())
             .success();
     }
@@ -166,7 +163,7 @@ mod end_to_end {
         let diff =
             TempDir::new("it_works_for_different_images_and_produces_diff_file_diff").unwrap();
 
-        Command::main_binary()
+        Command::cargo_bin("img_diff")
             .unwrap()
             .args(
                 &[
@@ -179,17 +176,17 @@ mod end_to_end {
                 ],
             )
             .assert()
-            .stdout(predicate::str::is_match("Dssim[(]4.4469[0-9]{10,11}[)]\n").unwrap())
+            .stdout(predicate::str::is_match("63.09777321439715%\n").unwrap())
             .stderr(predicate::str::is_empty())
             .success();
 
-        assert!(File::open(diff.path().join("rustacean-error.png-0.png"),).is_ok());
+        assert!(File::open(diff.path().join("rustacean-error.png"),).is_ok());
     }
 
     #[test]
     fn it_works_for_nested_folders() {
         let diff = TempDir::new("it_works_for_nested_folders_diff").unwrap();
-        Command::main_binary()
+        Command::cargo_bin("img_diff")
             .unwrap()
             .args(&[
                 "-s",
@@ -201,9 +198,9 @@ mod end_to_end {
             ])
             .assert()
             .stdout(
-                predicate::str::is_match("Dssim[(]4.4469[0-9]{10,11}[)]\n")
+                predicate::str::is_match("63.09777321439715%\n")
                     .unwrap()
-                    .and(predicate::str::is_match("Dssim[(]((0[.]0)|(0))+[)]\n").unwrap()),
+                    .and(predicate::str::is_match("63.09777321439715%\n").unwrap()),
             )
             .stderr(predicate::str::is_empty())
             .success();
@@ -213,7 +210,7 @@ mod end_to_end {
     fn it_works_for_more_files_in_scr_than_dest() {
         let diff = TempDir::new("it_works_for_more_files_in_scr_than_dest_diff").unwrap();
 
-        Command::main_binary()
+        Command::cargo_bin("img_diff")
             .unwrap()
             .args(
                 &[
@@ -227,9 +224,9 @@ mod end_to_end {
             )
             .assert()
             .stdout(
-                predicate::str::is_match("Dssim[(]4.4469[0-9]{10,11}[)]\n")
+                predicate::str::is_match("63.09777321439715%\n")
                     .unwrap()
-                    .and(predicate::str::is_match("Dssim[(]0(.0)*[)]\n").unwrap()),
+                    .and(predicate::str::is_match("63.09777321439715%\n").unwrap()),
             )
             .stderr(predicate::str::is_empty())
             .success();
@@ -242,7 +239,7 @@ mod end_to_end {
             .path()
             .join("it_works_when_diff_folder_is_not_created_diff");
 
-        Command::main_binary()
+        Command::cargo_bin("img_diff")
             .unwrap()
             .args(
                 &[
@@ -256,9 +253,9 @@ mod end_to_end {
             )
             .assert()
             .stdout(
-                predicate::str::is_match("Dssim[(]4.4469[0-9]{10,11}[)]\n")
+                predicate::str::is_match("63.09777321439715%\n")
                     .unwrap()
-                    .and(predicate::str::is_match("Dssim[(]0(.0)*[)]\n").unwrap()),
+                    .and(predicate::str::is_match("63.09777321439715%\n").unwrap()),
             )
             .stderr(predicate::str::is_empty())
             .success();
@@ -271,7 +268,7 @@ mod end_to_end {
             .path()
             .join("it_works_when_images_have_different_dimensions_diff");
 
-        Command::main_binary()
+        Command::cargo_bin("img_diff")
             .unwrap()
             .args(
                 &[
@@ -296,7 +293,7 @@ mod end_to_end {
     #[test]
     fn when_in_verbose_mode_prints_each_file_compare() {
         let diff = TempDir::new("it_works_for_equal_images_diff").unwrap();
-        Command::main_binary()
+        Command::cargo_bin("img_diff")
             .unwrap()
             .args(&[
                 "-v",
@@ -316,7 +313,7 @@ mod end_to_end {
     #[test]
     fn when_in_verbose_mode_prints_each_file_diff_to_stderr() {
         let diff = TempDir::new("it_works_for_different_images_diff").unwrap();
-        Command::main_binary()
+        Command::cargo_bin("img_diff")
             .unwrap()
             .args(&[
                 "-v",
