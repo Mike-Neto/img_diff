@@ -3,24 +3,16 @@
 [![Linux/OSX Build Status](https://travis-ci.org/Mike-Neto/img_diff.svg?branch=master)](https://travis-ci.org/Mike-Neto/img_diff)
 [![Windows Build Status](https://ci.appveyor.com/api/projects/status/afjuww52fyb2bd3g?svg=true)](https://ci.appveyor.com/project/Mike-Neto/img-diff)
 [![Current Version](https://img.shields.io/crates/v/img_diff.svg)](https://crates.io/crates/img_diff)
+[![dependency status](https://deps.rs/repo/github/Mike-Neto/img_diff/status.svg)](https://deps.rs/repo/github/Mike-Neto/img_diff)
 [![License: MIT](https://img.shields.io/crates/l/img_diff.svg)](#license)
 
 Rust based Command line tool to diff images in 2 structurally similar folders and output diff images.
 
-Comparison is done using [the SSIM algorithm](https://ece.uwaterloo.ca/~z70wang/research/ssim/) at multiple weighed resolutions and relies on the [dssim](https://crates.io/crates/dssim) crate for the comparisons of png images.
-
-BMP files are compared using a by pixel sample algorithm and the output is the MOD of the difference between each of the
-pixel components (rgb)
-
-The value returned is 1/SSIM-1, where 0 means identical image, and >0 (unbounded) is amount of difference for PNG.
-
-The value returned for bmp images 0 if images are equal and a positive number that scales with the amount of differences.
+The value outputted represent a percentage of how much the amount of pixel data differs from the hightest possible value for that given image in each pixel.
 
 ## Future Features
-
 * Support multiple format's of images (JPEG).
 * Allow for a threshold to output diff file.
-* Provide a single unit of difference.
 
 ### From the CLI WG
 * Revise stdout & stderr efficiency (avoid flush by using a stream).
@@ -37,7 +29,7 @@ Will go trough all the files in the -s dir and subdirectories and compare them t
 
 	-v
 
-enables verbose mode and output to stderr.
+enables verbose mode and output to stderr in case of a difference found.
 
 
 ## Usage in CI
@@ -76,6 +68,13 @@ You need [Rust](https://www.rust-lang.org)
 You can also download a binary release for your platform on [github releases](https://github.com/Mike-Neto/img_diff/releases/latest)
 
 ## Changelog
+
+### From 3.0.2
+Removed Dssim and a bunch of other dependencies.
+
+Now the value shown is a percentage. More details above.
+
+Uniform value no matter the image type.
 
 ### From 3.0.1
 Fixed some issues and migrated to using tools as recommended by the CLI WG
