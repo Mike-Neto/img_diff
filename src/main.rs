@@ -44,7 +44,9 @@ mod end_to_end {
             ])
             .assert()
             .stdout(
-                predicate::str::similar("0.0%\n11.767643066534347%\n7.78290972110149%\n")
+                predicate::str::is_match("0.0%\n|11.767643066534347%\n|7.78290972110149%\n")
+                    .unwrap()
+                    .count(3)
             )
             .success();
         assert!(File::open(diff.path().join("rustacean-error.bmp"),).is_ok());
