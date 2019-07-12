@@ -67,6 +67,13 @@ You need [Rust](https://www.rust-lang.org)
 
 You can also download a binary release for your platform on [github releases](https://github.com/Mike-Neto/img_diff/releases/latest)
 
+## Publish process
+cargo bump (major|minor|patch)
+git commit -m "v4.0.0"
+git tag -a v4.0.0 -m "v4.0.0"
+git push --tags
+cargo publish
+
 ## Changelog
 
 ### From 3.0.2
