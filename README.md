@@ -46,9 +46,9 @@ We can use this to enable CI with
      cargo build --release
 
 ## Build all files
-	cargo build && cargo test && cargo bench --no-run
-    cargo +beta build && cargo +beta test && cargo +beta bench --no-run
-	cargo +nightly build && cargo +nightly test && cargo +nightly bench --no-run
+	cargo build && cargo test && cargo test --benches
+    cargo +beta build && cargo +beta test && cargo +beta test --benches
+	cargo +nightly build && cargo +nightly test && cargo +nightly test --benches
 
 ## Test
 	cargo test

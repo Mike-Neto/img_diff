@@ -13,7 +13,7 @@ main() {
     cross test --target $TARGET
     cross test --target $TARGET --release
 
-    #cross bench --target $TARGET --no-run
+    cross test --target $TARGET --benches
     cross fmt
     cross clippy
 }
