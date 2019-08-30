@@ -12,7 +12,6 @@ use std::thread;
 use structopt::StructOpt;
 
 #[derive(Debug, StructOpt)]
-#[structopt(raw(setting = "structopt::clap::AppSettings::ColoredHelp"))]
 /// diff images in 2 structurally similar folders and output diff images
 pub struct Config {
     /// the folder to read
