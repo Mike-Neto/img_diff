@@ -81,12 +81,13 @@ fn max(a: u8, b: u8) -> u8 {
     }
 }
 
-fn subtract_image(a: &DynamicImage, b: &DynamicImage) -> (f64, DynamicImage) {
+pub fn subtract_image(a: &DynamicImage, b: &DynamicImage) -> (f64, DynamicImage) {
     let (x_dim, y_dim) = a.dimensions();
     let mut diff_image = DynamicImage::new_rgba8(x_dim, y_dim);
     let mut max_value: f64 = 0.0;
     let mut current_value: f64 = 0.0;
     for ((x, y, pixel_a), (_, _, pixel_b)) in a.pixels().zip(b.pixels()) {
+        // TODO(miguelmendes): find a way to avoid groups of 4 algorithm
         max_value += f64::from(max(pixel_a[0], pixel_b[0]));
         max_value += f64::from(max(pixel_a[1], pixel_b[1]));
         max_value += f64::from(max(pixel_a[2], pixel_b[2]));

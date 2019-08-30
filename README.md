@@ -54,7 +54,7 @@ We can use this to enable CI with
 	cargo test
 
 ## Docs
-     cargo doc --open
+    cargo doc --open
 
 ## Crate
 [Crates.io](https://crates.io/crates/img_diff)
@@ -68,11 +68,33 @@ You need [Rust](https://www.rust-lang.org)
 You can also download a binary release for your platform on [github releases](https://github.com/Mike-Neto/img_diff/releases/latest)
 
 ## Publish process
-cargo bump (major|minor|patch)
-git commit -m "v4.0.0"
-git tag -a v4.0.0 -m "v4.0.0"
-git push --tags
-cargo publish
+    cargo bump (major|minor|patch)
+    git commit -m "v4.0.0"
+    git tag -a v4.0.0 -m "v4.0.0"
+    git push --tags
+    cargo publish
+
+## Benchmarking and Profiling
+
+### Dependencies
+    sudo apt install valgrind kcachegrind
+
+### Local Benchmarks
+Will run all all benchmarks against local data.
+
+    cargo clean
+    git checkout master
+    cargo bench
+    git checkout $CURRENT_WORKING_BRANCH
+    cargo bench
+
+### Profiling changes
+    cargo bench img_diff/subtract
+    # Check for the binary name which will then be used as input bellow
+    valgrind --tool=callgrind --dump-instr=yes --collect-jumps=yes --simulate-cache=yes target/release/deps/bench-f72b65412859cf2f --bench img_diff/subtract
+    # Check for the above output file name
+    kcachegrind callgrind.out.20282
+
 
 ## Changelog
 

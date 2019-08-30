@@ -1,9 +1,9 @@
 use criterion::*;
-use img_diff::{do_diff, Config};
+use img_diff::{do_diff, subtract_image, Config};
 use std::path::PathBuf;
 use tempdir::TempDir;
 
-fn bench(c: &mut Criterion) {
+fn end_to_end(c: &mut Criterion) {
     let diff = TempDir::new("bench_png_diff").unwrap();
 
     let config: Config = Config {
@@ -21,5 +21,19 @@ fn bench(c: &mut Criterion) {
     group.finish();
 }
 
-criterion_group!(benches, bench);
+fn diff(c: &mut Criterion) {
+    let src_image = image::open("tests/bench_png/bench_png_src/rustacean-error.png").unwrap();
+    let dest_image = image::open("tests/bench_png/bench_png_dest/rustacean-error.png").unwrap();
+
+    let mut group = c.benchmark_group("img_diff");
+    group.sample_size(30);
+    group.bench_function("subtract", |b| {
+        b.iter(|| {
+            let (_diff_value, _diff_image) = subtract_image(&src_image, &dest_image);
+        })
+    });
+    group.finish();
+}
+
+criterion_group!(benches, end_to_end, diff);
 criterion_main!(benches);
