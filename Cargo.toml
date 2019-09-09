@@ -16,7 +16,7 @@ exclude = [
 [dependencies]
 structopt = "0.3.0"
 human-panic = "1.0.1"
-image = "0.22.1"
+image = "0.22.2"
 
 [dev-dependencies]
 criterion = "0.3.0"
