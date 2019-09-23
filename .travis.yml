@@ -24,11 +24,6 @@ matrix:
     - env: TARGET=x86_64-apple-darwin
       os: osx
 
-    # *BSD
-    - env: TARGET=i686-unknown-freebsd DISABLE_TESTS=1
-    - env: TARGET=x86_64-unknown-freebsd DISABLE_TESTS=1
-    - env: TARGET=x86_64-unknown-netbsd DISABLE_TESTS=1
-
     # Testing other channels
     - env: TARGET=x86_64-unknown-linux-gnu
       rust: beta
@@ -39,10 +34,6 @@ matrix:
       rust: beta
     - env: TARGET=x86_64-apple-darwin
       os: osx
-      rust: nightly
-    - env: TARGET=x86_64-unknown-freebsd
-      rust: beta
-    - env: TARGET=x86_64-unknown-freebsd
       rust: nightly
   allow_failures:
     - rust: nightly
@@ -81,8 +72,6 @@ cache: cargo
 before_cache:
   # Travis can't cache files that are not readable by "others"
   - chmod -R a+r $HOME/.cargo
-
-
 
 branches:
   only:
