@@ -1,10 +1,10 @@
 use criterion::*;
 use img_diff::{do_diff, subtract_image, Config};
 use std::path::PathBuf;
-use tempdir::TempDir;
+use tempfile::tempdir;
 
 fn end_to_end(c: &mut Criterion) {
-    let diff = TempDir::new("bench_png_diff").unwrap();
+    let diff = tempdir().unwrap();
 
     let config: Config = Config {
         src_dir: PathBuf::from("tests/bench_png/bench_png_src"),
