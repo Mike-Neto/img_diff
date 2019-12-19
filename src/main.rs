@@ -78,7 +78,7 @@ mod end_to_end {
     }
 
     #[test]
-    fn it_fails_when_path_is_provided_but_are_not_there() {
+    fn it_fails_when_path_is_provided_but_is_not_there() {
         Command::cargo_bin("img_diff")
             .unwrap()
             .args(&[
