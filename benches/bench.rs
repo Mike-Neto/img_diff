@@ -16,7 +16,6 @@ fn end_to_end(c: &mut Criterion) {
     let mut group = c.benchmark_group("img_diff");
     group.sample_size(20);
     group.bench_function("png", |b| b.iter(|| do_diff(&config)));
-
     group.bench_function("bmp", |b| b.iter(|| do_diff(&config)));
     group.finish();
 }
