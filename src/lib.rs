@@ -5,6 +5,7 @@
 //!
 use core::fmt;
 use image::{DynamicImage, GenericImage, GenericImageView, ImageResult};
+use std::cmp;
 use std::fs::{create_dir, read_dir, File};
 use std::io;
 use std::path::{Path, PathBuf};
@@ -114,14 +115,6 @@ fn output_diff_file(
     Ok(())
 }
 
-fn max(a: u8, b: u8) -> u8 {
-    if a > b {
-        a
-    } else {
-        b
-    }
-}
-
 pub fn subtract_image(a: &DynamicImage, b: &DynamicImage) -> (f64, DynamicImage) {
     let (x_dim, y_dim) = a.dimensions();
     let mut diff_image = DynamicImage::new_rgba8(x_dim, y_dim);
@@ -129,10 +122,10 @@ pub fn subtract_image(a: &DynamicImage, b: &DynamicImage) -> (f64, DynamicImage)
     let mut current_value: f64 = 0.0;
     for ((x, y, pixel_a), (_, _, pixel_b)) in a.pixels().zip(b.pixels()) {
         // TODO(miguelmendes): find a way to avoid groups of 4 algorithm
-        max_value += f64::from(max(pixel_a[0], pixel_b[0]));
-        max_value += f64::from(max(pixel_a[1], pixel_b[1]));
-        max_value += f64::from(max(pixel_a[2], pixel_b[2]));
-        max_value += f64::from(max(pixel_a[3], pixel_b[3]));
+        max_value += f64::from(cmp::max(pixel_a[0], pixel_b[0]));
+        max_value += f64::from(cmp::max(pixel_a[1], pixel_b[1]));
+        max_value += f64::from(cmp::max(pixel_a[2], pixel_b[2]));
+        max_value += f64::from(cmp::max(pixel_a[3], pixel_b[3]));
         let r = subtract_and_prevent_overflow(pixel_a[0], pixel_b[0]);
         let g = subtract_and_prevent_overflow(pixel_a[1], pixel_b[1]);
         let b = subtract_and_prevent_overflow(pixel_a[2], pixel_b[2]);
@@ -146,7 +139,7 @@ pub fn subtract_image(a: &DynamicImage, b: &DynamicImage) -> (f64, DynamicImage)
     (((current_value * 100.0) / max_value), diff_image)
 }
 
-fn subtract_and_prevent_overflow(a: u8, b: u8) -> u8 {
+fn subtract_and_prevent_overflow<T: Ord + std::ops::Sub<Output = T>>(a: T, b: T) -> T {
     if a > b {
         a - b
     } else {
@@ -275,7 +268,7 @@ fn print_dimensions_error(config: &Config, path: &PathBuf) -> ImgDiffResult<()> 
     if config.verbose {
         let path = path
             .to_str()
-            .ok_or_else(|| ImgDiffError::PathToStringConversionFailed(path.clone()));
+            .ok_or_else(|| ImgDiffError::PathToStringConversionFailed(path.clone()))?;
         eprintln!("diff found in file: {:?}", path);
     }
 

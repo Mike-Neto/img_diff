@@ -14,8 +14,8 @@ main() {
     cross test --target $TARGET --release
 
     cross test --target $TARGET --benches
-    cross fmt
-    cross clippy
+    cross fmt -- --check
+    cross clippy -- -D warnings
 }
 
 # we don't run the "test phase" when doing deploys
