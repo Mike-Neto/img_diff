@@ -4,13 +4,13 @@
 dist: trusty
 language: rust
 services: docker
-sudo: required
+os: linux
 
 env:
   global:
     - CRATE_NAME=img_diff
 
-matrix:
+jobs:
   include:
     # Linux
     - env: TARGET=i686-unknown-linux-gnu
@@ -56,7 +56,7 @@ before_deploy:
   - sh ci/before_deploy.sh
 
 deploy:
-  api_key:
+  token:
     secure: ZnxUG7MNDw09aJCgsE69HkHZ15m0C6bSb97s6u3b2Y6ZWqx9Oe4JR0UWXC3KcGXcRj+0tOMldvJUSvpkkgnBQpO0sUW7U6LdYk6/23F63sG86eA7PdgVH1sCxIRH6ozYl/bJbCEYBEjAIQ4aP98k0YeLhIhoW9o7e/P8fA9KCrnykHrVaBh/dong347I3p2GLFGoB+pLpINsKdksx3CuYMsWTaD4u74rncn5tad7XQLZ0HR1fwISvzUykCK9GA8AQuTvzOw52nybx+15nuY+BHmHfx7eysFjtwbkeEgvEuYVATSQ/YV8aod4vWN0lge1aAyzzRe949+O7d0ZNl7cwiTzGHIzhwrIQbciQ12YQ02uinwvf7IiEIASWWztFIz5reE/KJ2EgPvZZFrD1K3ev+ZdhxuqBlakBMJrUOiefWYZjRXXe7cz4U7+poFbuAf8fCp4vDyWTCFkgUh8qgw5HPVndtRnWDksA9XpV6AQLhZkV+d3FUF2ov5o1x7T3z5XdpGARveh5RJ3wcvdgXHNpag1MzCZVfJZG5dVfHcAP/HTiUprNKL3R5p62GOKRB7cuVCldCEti8X+zolk+MK6cC/z0gzN+D23ZRtGg6CNAfWFlvTwixsUZNHbdaw7K/uTbmqCL0vHixRgR/3XQbLxDgb/uhaVaugaFC9Qve5kqps=
   file_glob: true
   file: $CRATE_NAME-$TRAVIS_TAG-$TARGET.*
@@ -64,7 +64,7 @@ deploy:
     condition: $TRAVIS_RUST_VERSION = stable
     tags: true
   provider: releases
-  skip_cleanup: true
+  cleanup: true
 
 cache: cargo
 before_cache:
