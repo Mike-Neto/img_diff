@@ -102,7 +102,7 @@ fn output_diff_file(
             .ok_or_else(|| ImgDiffError::PathToStringConversionFailed(dest_path.clone()))?;
         let diff_file_name = get_diff_file_name_and_validate_path(path, config)?;
         let file_out = &mut File::create(&Path::new(&diff_file_name))?;
-        diff_image.write_to(file_out, image::PNG)?;
+        diff_image.write_to(file_out, image::ImageOutputFormat::Png)?;
 
         if config.verbose {
             if let Some(path) = src_path.to_str() {
