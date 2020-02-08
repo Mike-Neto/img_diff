@@ -23,7 +23,7 @@ pub enum ImgDiffError {
     ImageError(image::ImageError),
 
     ///
-    MpscSendError(std::sync::mpsc::SendError<Pair<DiffImage>>),
+    MpscSendError(Box<std::sync::mpsc::SendError<Pair<DiffImage>>>),
 
     /// Path to string conversion failed
     PathToStringConversionFailed(PathBuf),
@@ -58,7 +58,7 @@ impl From<image::ImageError> for ImgDiffError {
 
 impl From<std::sync::mpsc::SendError<Pair<DiffImage>>> for ImgDiffError {
     fn from(err: std::sync::mpsc::SendError<Pair<DiffImage>>) -> ImgDiffError {
-        ImgDiffError::MpscSendError(err)
+        ImgDiffError::MpscSendError(Box::from(err))
     }
 }
 
