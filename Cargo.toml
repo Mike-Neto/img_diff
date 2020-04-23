@@ -14,7 +14,7 @@ exclude = [
 ]
 
 [dependencies]
-structopt = "0.3.13"
+structopt = "0.3.14"
 human-panic = "1.0.3"
 image = "0.23.4"
 
