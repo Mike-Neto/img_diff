@@ -121,20 +121,22 @@ pub fn subtract_image(a: &DynamicImage, b: &DynamicImage) -> (f64, DynamicImage)
     let mut max_value: f64 = 0.0;
     let mut current_value: f64 = 0.0;
     for ((x, y, pixel_a), (_, _, pixel_b)) in a.pixels().zip(b.pixels()) {
-        // TODO(miguelmendes): find a way to avoid groups of 4 algorithm
-        max_value += f64::from(cmp::max(pixel_a[0], pixel_b[0]));
-        max_value += f64::from(cmp::max(pixel_a[1], pixel_b[1]));
-        max_value += f64::from(cmp::max(pixel_a[2], pixel_b[2]));
-        max_value += f64::from(cmp::max(pixel_a[3], pixel_b[3]));
-        let r = subtract_and_prevent_overflow(pixel_a[0], pixel_b[0]);
-        let g = subtract_and_prevent_overflow(pixel_a[1], pixel_b[1]);
-        let b = subtract_and_prevent_overflow(pixel_a[2], pixel_b[2]);
-        let a = subtract_and_prevent_overflow(pixel_a[3], pixel_b[3]);
-        current_value += f64::from(r);
-        current_value += f64::from(g);
-        current_value += f64::from(b);
-        current_value += f64::from(a);
-        diff_image.put_pixel(x, y, image::Rgba([255 - r, 255 - g, 255 - b, 255 - a]));
+        let mut pixel_other: Vec<u8> = vec![0; 4];
+        for i in 0..pixel_other.len() {
+            max_value += f64::from(cmp::max(pixel_a[i], pixel_b[i]));
+            pixel_other[i] = subtract_and_prevent_overflow(pixel_a[i], pixel_b[i]);
+            current_value += f64::from(pixel_other[i]);
+        }
+        diff_image.put_pixel(
+            x,
+            y,
+            image::Rgba([
+                255 - pixel_other[0],
+                255 - pixel_other[1],
+                255 - pixel_other[2],
+                255 - pixel_other[3],
+            ]),
+        );
     }
     (((current_value * 100.0) / max_value), diff_image)
 }
