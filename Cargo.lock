@@ -339,7 +339,7 @@ dependencies = [
 
 [[package]]
 name = "image"
-version = "0.23.6"
+version = "0.23.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "bytemuck 1.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -361,7 +361,7 @@ dependencies = [
  "assert_cmd 1.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "criterion 0.3.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "human-panic 1.0.3 (registry+https://github.com/rust-lang/crates.io-index)",
- "image 0.23.6 (registry+https://github.com/rust-lang/crates.io-index)",
+ "image 0.23.7 (registry+https://github.com/rust-lang/crates.io-index)",
  "predicates 1.0.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "structopt 0.3.15 (registry+https://github.com/rust-lang/crates.io-index)",
  "tempfile 3.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -1114,7 +1114,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 "checksum heck 0.3.1 (registry+https://github.com/rust-lang/crates.io-index)" = "20564e78d53d2bb135c343b3f47714a56af2061f1c928fdb541dc7b9fdd94205"
 "checksum hermit-abi 0.1.6 (registry+https://github.com/rust-lang/crates.io-index)" = "eff2656d88f158ce120947499e971d743c05dbcbed62e5bd2f38f1698bbc3772"
 "checksum human-panic 1.0.3 (registry+https://github.com/rust-lang/crates.io-index)" = "39f357a500abcbd7c5f967c1d45c8838585b36743823b9d43488f24850534e36"
-"checksum image 0.23.6 (registry+https://github.com/rust-lang/crates.io-index)" = "b5b0553fec6407d63fe2975b794dfb099f3f790bdc958823851af37b26404ab4"
+"checksum image 0.23.7 (registry+https://github.com/rust-lang/crates.io-index)" = "a2397fc43bd5648b7117aabb3c5e62d0e62c194826ec77b0b4d0c41e62744635"
 "checksum itertools 0.9.0 (registry+https://github.com/rust-lang/crates.io-index)" = "284f18f85651fe11e8a991b2adb42cb078325c996ed026d994719efcfca1d54b"
 "checksum itoa 0.4.5 (registry+https://github.com/rust-lang/crates.io-index)" = "b8b7a7c0c47db5545ed3fef7468ee7bb5b74691498139e4b3f6a20685dc6dd8e"
 "checksum jpeg-decoder 0.1.18 (registry+https://github.com/rust-lang/crates.io-index)" = "0256f0aec7352539102a9efbcb75543227b7ab1117e0f95450023af730128451"
