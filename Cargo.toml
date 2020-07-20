@@ -22,7 +22,7 @@ image = "0.23.7"
 criterion = "0.3.3"
 tempfile = "3.1.0"
 assert_cmd = "1.0.1"
-predicates = "1.0.4"
+predicates = "1.0.5"
 
 [[bench]]
 name = "bench"
