@@ -20,7 +20,7 @@ image = "0.23.12"
 
 [dev-dependencies]
 criterion = "0.3.3"
-tempfile = "3.1.0"
+tempfile = "3.2.0"
 assert_cmd = "1.0.2"
 predicates = "1.0.6"
 
