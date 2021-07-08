@@ -109,7 +109,7 @@ mod end_to_end {
                 diff.path().to_str().unwrap(),
             ])
             .assert()
-            .stdout(predicate::str::similar("0.0%\n"))
+            .stdout(predicate::str::diff("0.0%\n"))
             .stderr(predicate::str::is_empty())
             .success();
     }
@@ -132,7 +132,7 @@ mod end_to_end {
                     ],
                 )
                 .assert()
-                .stdout(predicate::str::similar("0.0%\n"))
+                .stdout(predicate::str::diff("0.0%\n"))
                 .stderr(predicate::str::is_empty())
                 .success();
     }
