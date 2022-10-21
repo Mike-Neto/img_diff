@@ -21,7 +21,7 @@ image = "0.24.4"
 [dev-dependencies]
 criterion = "0.4.0"
 tempfile = "3.3.0"
-assert_cmd = "2.0.4"
+assert_cmd = "2.0.5"
 predicates = "2.1.1"
 
 [[bench]]
