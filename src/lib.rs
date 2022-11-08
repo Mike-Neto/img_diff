@@ -3,6 +3,7 @@
 //! `img_diff` is a cmd line tool to diff images in 2 folders
 //! you can pass -h to see the help
 //!
+use clap::Parser;
 use core::fmt;
 use image::{DynamicImage, GenericImage, GenericImageView, ImageResult};
 use std::cmp;
@@ -11,7 +12,6 @@ use std::io;
 use std::path::{Path, PathBuf};
 use std::sync::mpsc;
 use std::thread;
-use structopt::StructOpt;
 
 /// An enumeration of ImgDiff possible Errors
 #[derive(Debug)]
@@ -62,20 +62,20 @@ impl From<std::sync::mpsc::SendError<Pair<DiffImage>>> for ImgDiffError {
     }
 }
 
-#[derive(Debug, StructOpt)]
+#[derive(Debug, Parser)]
 /// diff images in 2 structurally similar folders and output diff images
 pub struct Config {
     /// the folder to read
-    #[structopt(parse(from_os_str), short = "s")]
+    #[arg(short, long)]
     pub src_dir: PathBuf,
     /// the folder to compare the read images
-    #[structopt(parse(from_os_str), short = "d")]
+    #[arg(short, long)]
     pub dest_dir: PathBuf,
     /// the folder to output the diff images if a diff is found
-    #[structopt(parse(from_os_str), short = "f")]
+    #[arg(short = 'f', long)]
     pub diff_dir: PathBuf,
     /// toggle verbose mode
-    #[structopt(short = "v", long = "verbose")]
+    #[arg(short, long)]
     pub verbose: bool,
 }
 

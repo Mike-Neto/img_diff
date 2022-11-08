@@ -1,9 +1,9 @@
+use clap::Parser;
 use human_panic::*;
 use img_diff::{do_diff, Config};
-use structopt::StructOpt;
 
 fn main() {
-    let config = Config::from_args();
+    let config = Config::parse();
     setup_panic!();
 
     if config.verbose {

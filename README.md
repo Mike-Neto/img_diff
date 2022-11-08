@@ -20,7 +20,6 @@ The value outputted represent a percentage of how much the amount of pixel data 
 - Add logging (log crate)
 - Add Progress bar (indicatif crate)
 - Add types of output (convey crate)
-- Generate a man page (clap crate)
 
 ## Usage
 
