@@ -17,7 +17,6 @@ The value outputted represent a percentage of how much the amount of pixel data 
 ### From the CLI WG
 
 - Revise stdout & stderr efficiency (avoid flush by using a stream).
-- Add logging (log crate)
 - Add Progress bar (indicatif crate)
 - Add types of output (convey crate)
 

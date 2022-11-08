@@ -6,6 +6,7 @@
 use clap::Parser;
 use core::fmt;
 use image::{DynamicImage, GenericImage, GenericImageView, ImageResult};
+use log::{info, warn};
 use std::cmp;
 use std::fs::{create_dir, read_dir, File};
 use std::io;
@@ -75,8 +76,8 @@ pub struct Config {
     #[arg(short = 'f', long)]
     pub diff_dir: PathBuf,
     /// toggle verbose mode
-    #[arg(short, long)]
-    pub verbose: bool,
+    #[command(flatten)]
+    pub verbose: clap_verbosity_flag::Verbosity,
 }
 
 pub struct DiffImage {
@@ -104,7 +105,7 @@ fn output_diff_file(
         let file_out = &mut File::create(&Path::new(&diff_file_name))?;
         diff_image.write_to(file_out, image::ImageOutputFormat::Png)?;
 
-        if config.verbose {
+        if config.verbose.log_level_filter() > log::LevelFilter::Error {
             if let Some(path) = src_path.to_str() {
                 eprintln!("diff found in file: {:?}", String::from(path));
             } else {
@@ -180,7 +181,7 @@ pub fn do_diff(config: &Config) -> ImgDiffResult<()> {
             print_dimensions_error(config, &pair.src.path)?;
         } else {
             let (diff_value, diff_image) = subtract_image(&src_image, &dest_image);
-            print_diff_result(config.verbose, &pair.src.path, diff_value);
+            print_diff_result(&pair.src.path, diff_value);
             output_diff_file(
                 diff_image,
                 diff_value,
@@ -243,9 +244,7 @@ fn get_diff_file_name_and_validate_path(
 
     if let Some(diff_path_dir) = diff_path.parent() {
         if !diff_path_dir.exists() {
-            if config.verbose {
-                println!("creating directory: {:?}", diff_path_dir);
-            }
+            info!("creating directory: {:?}", diff_path_dir);
             create_path(diff_path)?;
         }
     }
@@ -253,21 +252,18 @@ fn get_diff_file_name_and_validate_path(
 }
 
 /// print diff result
-fn print_diff_result(verbose: bool, entry: &PathBuf, diff_value: f64) {
-    if verbose {
-        println!(
-            "compared file: {:?} had diff value of: {:?}%",
-            entry, diff_value
-        );
-    } else {
-        println!("{:?}%", diff_value);
-    }
+fn print_diff_result(entry: &PathBuf, diff_value: f64) {
+    info!(
+        "compared file: {:?} had diff value of: {:?}%",
+        entry, diff_value
+    );
+    println!("{:?}%", diff_value);
 }
 
 /// print dimensions errors
 fn print_dimensions_error(config: &Config, path: &PathBuf) -> ImgDiffResult<()> {
-    println!("Images have different dimensions, skipping comparison");
-    if config.verbose {
+    warn!("Images have different dimensions, skipping comparison");
+    if config.verbose.log_level_filter() > log::LevelFilter::Error {
         let path = path
             .to_str()
             .ok_or_else(|| ImgDiffError::PathToStringConversionFailed(path.clone()))?;

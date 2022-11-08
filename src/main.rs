@@ -1,22 +1,21 @@
 use clap::Parser;
 use human_panic::*;
 use img_diff::{do_diff, Config};
+use log::info;
 
 fn main() {
     let config = Config::parse();
+    env_logger::Builder::new()
+        .filter_level(config.verbose.log_level_filter())
+        .init();
     setup_panic!();
 
-    if config.verbose {
-        println!("Parsed configs: {:?}", config);
-    }
-
+    info!("Parsed configs: {config:?}");
     match do_diff(&config) {
         Ok(_) => {
-            if config.verbose {
-                println!("Compared everything, process ended with great success!")
-            }
+            info!("Compared everything, process ended with great success!")
         }
-        Err(err) => eprintln!("Error occurred: {:?}", err),
+        Err(err) => eprintln!("Error occurred: {err:?}"),
     }
 }
 
@@ -281,30 +280,13 @@ mod end_to_end {
             )
             .assert()
             .stdout(
-                predicate::str::contains("Images have different dimensions, skipping comparison"),
+                predicates::str::is_empty(),
             )
             .stderr(predicate::str::contains("rustacean-error.png").and(
-                predicate::str::contains("MARBLES_01.BMP")
+                predicate::str::contains("MARBLES_01.BMP").and(
+                    predicate::str::contains("Images have different dimensions, skipping comparison")
+                )
             ))
-            .success();
-    }
-    #[test]
-    fn when_in_verbose_mode_prints_each_file_compare() {
-        let diff = tempdir().unwrap();
-        Command::cargo_bin("img_diff")
-            .unwrap()
-            .args(&[
-                "-v",
-                "-s",
-                "tests/it_works_for_equal_images/it_works_for_equal_images_src",
-                "-d",
-                "tests/it_works_for_equal_images/it_works_for_equal_images_dest",
-                "-f",
-                diff.path().to_str().unwrap(),
-            ])
-            .assert()
-            .stdout(predicate::str::contains("compared file:"))
-            .stderr(predicate::str::is_empty())
             .success();
     }
 

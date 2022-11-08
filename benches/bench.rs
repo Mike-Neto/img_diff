@@ -1,3 +1,4 @@
+use clap_verbosity_flag::Verbosity;
 use criterion::*;
 use img_diff::{do_diff, subtract_image, Config};
 use std::path::PathBuf;
@@ -10,7 +11,7 @@ fn end_to_end(c: &mut Criterion) {
         src_dir: PathBuf::from("tests/bench_png/bench_png_src"),
         dest_dir: PathBuf::from("tests/bench_png/bench_png_dest"),
         diff_dir: PathBuf::from(diff.path().to_str().unwrap()),
-        verbose: true,
+        verbose: Verbosity::new(3, 0),
     };
 
     let mut group = c.benchmark_group("img_diff");
