@@ -153,7 +153,7 @@ fn subtract_and_prevent_overflow<T: Ord + std::ops::Sub<Output = T>>(a: T, b: T)
 /// Diffs all images using a channel to parallelize the file IO and processing.
 pub fn do_diff(config: &Config) -> ImgDiffResult<()> {
     // Get a full list of all images to load (scr and dest pairs)
-    let files_to_load = find_all_files_to_load(config.src_dir.clone(), &config)?;
+    let files_to_load = find_all_files_to_load(&config.src_dir, &config)?;
 
     // open a channel to load pairs of images from disk
     let (transmitter, receiver) = mpsc::channel();
@@ -196,7 +196,10 @@ pub fn do_diff(config: &Config) -> ImgDiffResult<()> {
 }
 
 /// Recursively finds all files to compare based on the directory
-fn find_all_files_to_load(dir: PathBuf, config: &Config) -> ImgDiffResult<Vec<(PathBuf, PathBuf)>> {
+fn find_all_files_to_load(
+    dir: &PathBuf,
+    config: &Config,
+) -> ImgDiffResult<Vec<(PathBuf, PathBuf)>> {
     let mut files: Vec<(PathBuf, PathBuf)> = vec![];
     let entries = read_dir(dir)?;
     for entry in entries {
@@ -217,7 +220,7 @@ fn find_all_files_to_load(dir: PathBuf, config: &Config) -> ImgDiffResult<Vec<(P
                 files.push((path, dest_path));
             }
         } else {
-            let child_files = find_all_files_to_load(path, &config)?;
+            let child_files = find_all_files_to_load(&path, &config)?;
             files.extend(child_files);
         }
     }
