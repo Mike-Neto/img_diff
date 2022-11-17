@@ -179,9 +179,9 @@ dependencies = [
 
 [[package]]
 name = "clap"
-version = "4.0.25"
+version = "4.0.26"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "389ca505fd2c00136e0d0cd34bcd8b6bd0b59d5779aab396054b716334230c1c"
+checksum = "2148adefda54e14492fb9bddcc600b4344c5d1a3123bd666dcb939c6f0e0e57e"
 dependencies = [
  "atty",
  "bitflags",
@@ -198,7 +198,7 @@ version = "2.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "23e2b6c3dcdb73299f48ae05b294da14e2f560b3ed2c09e742269eb1b22af231"
 dependencies = [
- "clap 4.0.25",
+ "clap 4.0.26",
  "log",
 ]
 
@@ -542,7 +542,7 @@ name = "img_diff"
 version = "5.0.0"
 dependencies = [
  "assert_cmd",
- "clap 4.0.25",
+ "clap 4.0.26",
  "clap-verbosity-flag",
  "criterion",
  "env_logger",
