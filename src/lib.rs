@@ -3,65 +3,15 @@
 //! `img_diff` is a cmd line tool to diff images in 2 folders
 //! you can pass -h to see the help
 //!
+use anyhow::Result;
 use clap::Parser;
-use core::fmt;
 use image::{DynamicImage, GenericImage, GenericImageView, ImageResult};
 use log::{info, warn};
 use std::cmp;
 use std::fs::{create_dir, read_dir, File};
-use std::io;
 use std::path::{Path, PathBuf};
 use std::sync::mpsc;
 use std::thread;
-
-/// An enumeration of ImgDiff possible Errors
-#[derive(Debug)]
-pub enum ImgDiffError {
-    /// An I/O Error occurred while decoding the image
-    IoError(io::Error),
-
-    ///
-    ImageError(image::ImageError),
-
-    ///
-    MpscSendError(Box<std::sync::mpsc::SendError<Pair<DiffImage>>>),
-
-    /// Path to string conversion failed
-    PathToStringConversionFailed(PathBuf),
-}
-
-pub type ImgDiffResult<T> = Result<T, ImgDiffError>;
-
-impl fmt::Display for ImgDiffError {
-    fn fmt(&self, fmt: &mut fmt::Formatter) -> Result<(), fmt::Error> {
-        match *self {
-            ImgDiffError::IoError(ref e) => e.fmt(fmt),
-            ImgDiffError::ImageError(ref e) => e.fmt(fmt),
-            ImgDiffError::MpscSendError(ref e) => e.fmt(fmt),
-            ImgDiffError::PathToStringConversionFailed(ref e) => {
-                write!(fmt, "Path to string conversion failed Path: {:?}", e)
-            }
-        }
-    }
-}
-
-impl From<io::Error> for ImgDiffError {
-    fn from(err: io::Error) -> ImgDiffError {
-        ImgDiffError::IoError(err)
-    }
-}
-
-impl From<image::ImageError> for ImgDiffError {
-    fn from(err: image::ImageError) -> ImgDiffError {
-        ImgDiffError::ImageError(err)
-    }
-}
-
-impl From<std::sync::mpsc::SendError<Pair<DiffImage>>> for ImgDiffError {
-    fn from(err: std::sync::mpsc::SendError<Pair<DiffImage>>) -> ImgDiffError {
-        ImgDiffError::MpscSendError(Box::from(err))
-    }
-}
 
 #[derive(Debug, Parser)]
 /// diff images in 2 structurally similar folders and output diff images
@@ -96,12 +46,10 @@ fn output_diff_file(
     config: &Config,
     src_path: PathBuf,
     dest_path: PathBuf,
-) -> ImgDiffResult<()> {
+) -> Result<()> {
     if diff_value != 0.0 {
-        let path = dest_path
-            .to_str()
-            .ok_or_else(|| ImgDiffError::PathToStringConversionFailed(dest_path.clone()))?;
-        let diff_file_name = get_diff_file_name_and_validate_path(path, config)?;
+        let diff_file_name =
+            get_diff_file_name_and_validate_path(&dest_path.to_string_lossy(), config)?;
         let file_out = &mut File::create(&Path::new(&diff_file_name))?;
         diff_image.write_to(file_out, image::ImageOutputFormat::Png)?;
 
@@ -151,13 +99,13 @@ fn subtract_and_prevent_overflow<T: Ord + std::ops::Sub<Output = T>>(a: T, b: T)
 }
 
 /// Diffs all images using a channel to parallelize the file IO and processing.
-pub fn do_diff(config: &Config) -> ImgDiffResult<()> {
+pub fn do_diff(config: &Config) -> Result<()> {
     // Get a full list of all images to load (scr and dest pairs)
     let files_to_load = find_all_files_to_load(&config.src_dir, &config)?;
 
     // open a channel to load pairs of images from disk
     let (transmitter, receiver) = mpsc::channel();
-    thread::spawn(move || -> ImgDiffResult<()> {
+    thread::spawn(move || -> Result<()> {
         for (scr_path, dest_path) in files_to_load {
             transmitter.send(Pair {
                 src: DiffImage {
@@ -196,25 +144,16 @@ pub fn do_diff(config: &Config) -> ImgDiffResult<()> {
 }
 
 /// Recursively finds all files to compare based on the directory
-fn find_all_files_to_load(
-    dir: &PathBuf,
-    config: &Config,
-) -> ImgDiffResult<Vec<(PathBuf, PathBuf)>> {
+fn find_all_files_to_load(dir: &PathBuf, config: &Config) -> Result<Vec<(PathBuf, PathBuf)>> {
     let mut files: Vec<(PathBuf, PathBuf)> = vec![];
     let entries = read_dir(dir)?;
     for entry in entries {
         let path = entry?.path();
         if path.is_file() {
-            let entry_name = path
-                .to_str()
-                .ok_or_else(|| ImgDiffError::PathToStringConversionFailed(path.clone()))?;
-            let scr_name = config.src_dir.to_str().ok_or_else(|| {
-                ImgDiffError::PathToStringConversionFailed(config.src_dir.clone())
-            })?;
-            let dest_name = config.dest_dir.to_str().ok_or_else(|| {
-                ImgDiffError::PathToStringConversionFailed(config.dest_dir.clone())
-            })?;
-            let dest_file_name = entry_name.replace(scr_name, dest_name);
+            let entry_name = path.to_string_lossy();
+            let scr_name = config.src_dir.to_string_lossy();
+            let dest_name = config.dest_dir.to_string_lossy();
+            let dest_file_name = entry_name.replace(scr_name.as_ref(), dest_name.as_ref());
             let dest_path = PathBuf::from(dest_file_name);
             if dest_path.exists() {
                 files.push((path, dest_path));
@@ -229,20 +168,11 @@ fn find_all_files_to_load(
 }
 
 /// helper to create necessary folders for IO operations to be successful
-fn get_diff_file_name_and_validate_path(
-    dest_file_name: &str,
-    config: &Config,
-) -> ImgDiffResult<String> {
-    let dest_name = config
-        .dest_dir
-        .to_str()
-        .ok_or_else(|| ImgDiffError::PathToStringConversionFailed(config.dest_dir.clone()))?;
-    let diff_name = config
-        .diff_dir
-        .to_str()
-        .ok_or_else(|| ImgDiffError::PathToStringConversionFailed(config.diff_dir.clone()))?;
+fn get_diff_file_name_and_validate_path(dest_file_name: &str, config: &Config) -> Result<String> {
+    let dest_name = config.dest_dir.to_string_lossy();
+    let diff_name = config.diff_dir.to_string_lossy();
 
-    let diff_file_name = dest_file_name.replace(dest_name, diff_name);
+    let diff_file_name = dest_file_name.replace(dest_name.as_ref(), diff_name.as_ref());
     let diff_path = Path::new(&diff_file_name);
 
     if let Some(diff_path_dir) = diff_path.parent() {
@@ -264,12 +194,10 @@ fn print_diff_result(entry: &PathBuf, diff_value: f64) {
 }
 
 /// print dimensions errors
-fn print_dimensions_error(config: &Config, path: &PathBuf) -> ImgDiffResult<()> {
+fn print_dimensions_error(config: &Config, path: &PathBuf) -> Result<()> {
     warn!("Images have different dimensions, skipping comparison");
     if config.verbose.log_level_filter() > log::LevelFilter::Error {
-        let path = path
-            .to_str()
-            .ok_or_else(|| ImgDiffError::PathToStringConversionFailed(path.clone()))?;
+        let path = path.to_string_lossy();
         eprintln!("diff found in file: {:?}", path);
     }
 
@@ -277,7 +205,7 @@ fn print_dimensions_error(config: &Config, path: &PathBuf) -> ImgDiffResult<()> 
 }
 
 /// Helper to create folder hierarchies
-fn create_path(path: &Path) -> ImgDiffResult<()> {
+fn create_path(path: &Path) -> Result<()> {
     let mut buffer = path.to_path_buf();
     if buffer.is_file() {
         buffer.pop();
@@ -287,7 +215,7 @@ fn create_path(path: &Path) -> ImgDiffResult<()> {
 }
 
 /// recursive way to create folders hierarchies
-fn create_dir_if_not_there(mut buffer: PathBuf) -> ImgDiffResult<PathBuf> {
+fn create_dir_if_not_there(mut buffer: PathBuf) -> Result<PathBuf> {
     if buffer.pop() {
         create_dir_if_not_there(buffer.clone())?;
         if !buffer.exists() && buffer != Path::new("") {

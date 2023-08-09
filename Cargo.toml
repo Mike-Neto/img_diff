@@ -9,9 +9,7 @@ repository = "https://github.com/Mike-Neto/img_diff"
 categories = ["multimedia::images", "command-line-utilities"]
 keywords = ["image", "comparison"]
 readme = "README.md"
-exclude = [
-    "tests/*",
-]
+exclude = ["tests/*"]
 
 [dependencies]
 human-panic = "1.1.0"
@@ -20,12 +18,13 @@ clap = { version = "4.1.6", features = ["derive"] }
 log = "0.4.17"
 env_logger = "0.10.0"
 clap-verbosity-flag = "2.0.0"
+anyhow = "1.0.72"
 
 [dev-dependencies]
-criterion = "0.4.0"
+criterion = "0.5.1"
 tempfile = "3.3.0"
 assert_cmd = "2.0.8"
-predicates = "2.1.5"
+predicates = "3.0.3"
 
 [[bench]]
 name = "bench"
