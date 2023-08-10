@@ -35,11 +35,6 @@ pub struct DiffImage {
     image: ImageResult<DynamicImage>,
 }
 
-pub struct Pair<T> {
-    src: T,
-    dest: T,
-}
-
 fn output_diff_file(
     diff_image: DynamicImage,
     diff_value: f64,
@@ -107,36 +102,30 @@ pub fn do_diff(config: &Config) -> Result<()> {
     let (transmitter, receiver) = mpsc::channel();
     thread::spawn(move || -> Result<()> {
         for (scr_path, dest_path) in files_to_load {
-            transmitter.send(Pair {
-                src: DiffImage {
+            transmitter.send((
+                DiffImage {
                     path: scr_path.clone(),
                     image: image::open(scr_path),
                 },
-                dest: DiffImage {
+                DiffImage {
                     path: dest_path.clone(),
                     image: image::open(dest_path),
                 },
-            })?;
+            ))?
         }
         Ok(())
     });
 
     // do the comparison in the receiving channel
-    for pair in receiver {
-        let src_image = pair.src.image?;
-        let dest_image = pair.dest.image?;
+    for (src, dest) in receiver {
+        let src_image = src.image?;
+        let dest_image = dest.image?;
         if src_image.dimensions() != dest_image.dimensions() {
-            print_dimensions_error(config, &pair.src.path)?;
+            print_dimensions_error(config, &src.path)?;
         } else {
             let (diff_value, diff_image) = subtract_image(&src_image, &dest_image);
-            print_diff_result(&pair.src.path, diff_value);
-            output_diff_file(
-                diff_image,
-                diff_value,
-                config,
-                pair.src.path,
-                pair.dest.path,
-            )?
+            print_diff_result(&src.path, diff_value);
+            output_diff_file(diff_image, diff_value, config, src.path, dest.path)?
         }
     }
 
